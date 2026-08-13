@@ -10,11 +10,13 @@ import 'language_selection_screen.dart';
 class ContentDownloadScreen extends StatefulWidget {
   final int gradeId;
   final String gradeName;
+  final bool isUpdateMode;
 
   const ContentDownloadScreen({
     super.key,
     required this.gradeId,
     required this.gradeName,
+    this.isUpdateMode = false,
   });
 
   @override
@@ -83,10 +85,16 @@ class _ContentDownloadScreenState extends State<ContentDownloadScreen>
       // Lock grade selection permanently after successful download
       await provider.lockGrade();
 
+      if (widget.isUpdateMode) {
+        // Do not auto-navigate to language screen if opened from settings
+        return;
+      }
+
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
       _navigateToLanguageSelection();
     } else if (_hasError) {
+      if (widget.isUpdateMode) return;
       // Show friendly message if content for this grade is unavailable
       _showContentUnavailableDialog();
     }
@@ -345,13 +353,18 @@ class _ContentDownloadScreenState extends State<ContentDownloadScreen>
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _navigateToLanguageSelection,
+                            onPressed: widget.isUpdateMode
+                                ? () => Navigator.of(context).pop()
+                                : _navigateToLanguageSelection,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.emeraldGreen,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            child: const Text('Continue →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              widget.isUpdateMode ? '← Return to Settings' : 'Continue →',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ],

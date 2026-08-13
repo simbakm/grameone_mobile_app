@@ -7,6 +7,7 @@ import '../../data/models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/whatsapp_utils.dart';
 import 'activation_screen.dart';
+import 'content_download_screen.dart';
 import 'grade_selection_screen.dart';
 import 'language_selection_screen.dart';
 
@@ -405,6 +406,28 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const LanguageSelectionScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Check for Content Updates (Question Bank Sync)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.system_update_alt, color: AppColors.emeraldGreen),
+                title: const Text('Check for Content Updates', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Sync & download latest Grade ${provider.currentGrade} question bank'),
+                trailing: const Icon(Icons.chevron_right, color: AppColors.emeraldGreen),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ContentDownloadScreen(
+                        gradeId: provider.currentGrade,
+                        gradeName: 'Grade ${provider.currentGrade}',
+                        isUpdateMode: true,
+                      ),
+                    ),
                   );
                 },
               ),

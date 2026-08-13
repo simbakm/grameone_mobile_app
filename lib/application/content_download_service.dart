@@ -99,6 +99,40 @@ class ContentDownloadService {
       final fileNames = archive.files.map((f) => f.name).toList();
       debugPrint('📂 [DEBUG] ZIP Archive File List: $fileNames');
 
+      // ── Extract bundled images to permanent storage ──────────────────────
+      // Images live at assets/images/<filename> inside the ZIP.
+      // After extraction they are saved to <docsDir>/grameone/images/<filename>
+      // and a relative→absolute path map is built for question insertion.
+      final docsDir = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${docsDir.path}/grameone/images');
+      await imagesDir.create(recursive: true);
+
+      // Map: "assets/images/<file>" → absolute local path
+      final Map<String, String> relativeToAbsolutePath = {};
+
+      final imageFiles = archive.files
+          .where((f) => f.isFile && f.name.startsWith('assets/images/'))
+          .toList();
+
+      if (imageFiles.isNotEmpty) {
+        onMessage('Saving ${imageFiles.length} bundled image(s) to device...');
+        debugPrint('🖼️ [DEBUG] Extracting ${imageFiles.length} bundled image(s)...');
+        for (final imgEntry in imageFiles) {
+          try {
+            final filename = imgEntry.name.split('/').last;
+            final localFile = File('${imagesDir.path}/$filename');
+            await localFile.writeAsBytes(imgEntry.content as List<int>);
+            relativeToAbsolutePath[imgEntry.name] = localFile.path;
+            debugPrint('🖼️ [DEBUG] Saved image: ${imgEntry.name} → ${localFile.path}');
+          } catch (e) {
+            debugPrint('⚠️ [DEBUG] Could not save image ${imgEntry.name}: $e');
+          }
+        }
+        debugPrint('✅ [DEBUG] ${relativeToAbsolutePath.length} image(s) extracted to ${imagesDir.path}');
+      } else {
+        debugPrint('ℹ️ [DEBUG] No bundled images in this package.');
+      }
+
       final dbFiles = archive.files
           .where((f) => f.isFile && (f.name.endsWith('.db') || f.name.endsWith('.sqlite')))
           .toList();
@@ -231,6 +265,12 @@ class ContentDownloadService {
             final q = questionRows[i];
             final qId = q['q_id']?.toString() ?? 'pkg_${gradeId}_$i';
 
+            // Resolve image path: map relative ZIP path → absolute local path
+            final rawImagePath = q['image_path']?.toString();
+            final resolvedImagePath = (rawImagePath != null && rawImagePath.isNotEmpty)
+                ? (relativeToAbsolutePath[rawImagePath] ?? rawImagePath)
+                : null;
+
             await txn.insert('questions', {
               'id': qId,
               'grade': gradeId,
@@ -241,8 +281,8 @@ class ContentDownloadService {
               'difficulty': q['difficulty'] ?? 'Medium',
               'question_text': q['question_text'] ?? '',
               'comprehension_text': q['comprehension_text'],
-              'image_path': q['image_path'],
-              'diagram_path': q['diagram_path'],
+              'image_path': resolvedImagePath,
+              'diagram_path': null,
               'explanation': q['explanation'] ?? '',
             }, conflictAlgorithm: ConflictAlgorithm.replace);
 
