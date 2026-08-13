@@ -49,4 +49,13 @@ class SettingsRepository {
       where: 'id = 1',
     );
   }
+
+  Future<void> updateGradeLock(bool isLocked) async {
+    final db = await dbProvider.database;
+    await db.update(
+      'user_settings',
+      {'is_grade_locked': isLocked ? 1 : 0},
+      where: 'id = 1',
+    );
+  }
 }

@@ -31,8 +31,9 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3,          // ← bumped from 2 to 3
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -48,7 +49,9 @@ class AppDatabase {
         concept TEXT NOT NULL,
         difficulty TEXT NOT NULL,
         question_text TEXT NOT NULL,
+        comprehension_text TEXT,
         image_path TEXT,
+        diagram_path TEXT,
         explanation TEXT NOT NULL
       )
     ''');
@@ -74,7 +77,8 @@ class AppDatabase {
         topic TEXT NOT NULL,
         total_questions INTEGER NOT NULL,
         correct_count INTEGER NOT NULL,
-        timestamp TEXT NOT NULL
+        timestamp TEXT NOT NULL,
+        learner_profile_id TEXT
       )
     ''');
 
@@ -109,7 +113,8 @@ class AppDatabase {
         id INTEGER PRIMARY KEY CHECK (id = 1),
         selected_grade INTEGER NOT NULL DEFAULT 7,
         selected_indigenous_lang TEXT NOT NULL DEFAULT 'Shona',
-        dark_mode INTEGER NOT NULL DEFAULT 0
+        dark_mode INTEGER NOT NULL DEFAULT 0,
+        is_grade_locked INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -125,13 +130,65 @@ class AppDatabase {
       )
     ''');
 
+    // ── v2: Learner Profiles Table ─────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE learner_profiles (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        avatar TEXT NOT NULL DEFAULT '🧒',
+        grade INTEGER NOT NULL DEFAULT 7,
+        indigenous_language TEXT NOT NULL DEFAULT 'Shona',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // ── v2: Active Profile Preference ─────────────────────────────────
+    await db.execute('''
+      CREATE TABLE active_profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        learner_profile_id TEXT
+      )
+    ''');
+
     // Initial Default Records
     await db.insert('user_settings', {
       'id': 1,
       'selected_grade': 7,
       'selected_indigenous_lang': 'Shona',
       'dark_mode': 0,
+      'is_grade_locked': 0,
     });
+  }
+
+  /// Migration from version 1 → 3: add learner_profiles, active_profile,
+  /// learner_profile_id column to quiz_attempts, and is_grade_locked to user_settings.
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE quiz_attempts ADD COLUMN learner_profile_id TEXT');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS learner_profiles (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          avatar TEXT NOT NULL DEFAULT '🧒',
+          grade INTEGER NOT NULL DEFAULT 7,
+          indigenous_language TEXT NOT NULL DEFAULT 'Shona',
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS active_profile (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          learner_profile_id TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE user_settings ADD COLUMN is_grade_locked INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        debugPrint('Column is_grade_locked may already exist: $e');
+      }
+    }
   }
 
   Future<void> clearDatabase() async {

@@ -34,20 +34,66 @@ class ParentDashboardScreen extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.family_restroom, size: 40, color: AppColors.emeraldGreen),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          'Track your child\'s real learning progress, exam readiness, and revision consistency.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.forestGreenDark,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.family_restroom, size: 40, color: AppColors.emeraldGreen),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Text(
+                              'Track your child\'s real learning progress, exam readiness, and revision consistency.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.forestGreenDark,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
+                      if (provider.learnerProfiles.length >= 2) ...[
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Text(provider.activeLearner?.avatar ?? '🧒', style: const TextStyle(fontSize: 20)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Viewing: ${provider.activeLearner?.name ?? "Learner"}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.deepMaroon),
+                                ),
+                              ],
+                            ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.arrow_drop_down_circle_outlined, color: AppColors.emeraldGreen),
+                              tooltip: 'Switch Child Profile',
+                              onSelected: (id) {
+                                final profile = provider.learnerProfiles.firstWhere((p) => p.id == id);
+                                provider.switchLearnerProfile(profile);
+                              },
+                              itemBuilder: (ctx) => provider.learnerProfiles.map((p) {
+                                return PopupMenuItem(
+                                  value: p.id,
+                                  child: Row(
+                                    children: [
+                                      Text(p.avatar, style: const TextStyle(fontSize: 18)),
+                                      const SizedBox(width: 8),
+                                      Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      if (p.id == provider.activeLearner?.id) ...[
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.check, size: 16, color: AppColors.emeraldGreen),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -118,7 +164,7 @@ class ParentDashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Recommended Parent Guidance (Generated dynamically from real DB data)
+              // Recommended Parent Guidance (Generated dynamically from real DB data for <90% concepts, max 5)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -136,11 +182,11 @@ class ParentDashboardScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       if (weakConcepts.isEmpty)
                         const Text(
-                          '• Encourage the learner to complete revision tests regularly to identify target areas.',
+                          '• Learner is performing excellently with 90%+ mastery across all attempted concepts.',
                           style: TextStyle(fontSize: 14, color: AppColors.textPrimaryLight),
                         )
                       else
-                        ...weakConcepts.take(3).map((w) {
+                        ...weakConcepts.take(5).map((w) {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 6.0),
                             child: Text(
@@ -156,7 +202,7 @@ class ParentDashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Recent Test History (Real dynamic attempts from DB)
+              // Recent Test History (Last 5 attempts from DB)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -164,7 +210,7 @@ class ParentDashboardScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Recent Test Attempts',
+                        'Recent Test Attempts (Last 5)',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -182,7 +228,7 @@ class ParentDashboardScreen extends StatelessWidget {
                           ),
                         )
                       else
-                        ...recentAttempts.map((attempt) {
+                        ...recentAttempts.take(5).map((attempt) {
                           final formattedDate = DateFormat('MMM d, y • HH:mm').format(attempt.timestamp);
                           final pct = attempt.scorePercentage;
                           final Color scoreColor = pct >= 80

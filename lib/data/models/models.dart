@@ -39,7 +39,9 @@ class Question {
   final String concept;
   final String difficulty;
   final String questionText;
+  final String? comprehensionText;
   final String? imagePath;
+  final String? diagramPath;
   final String explanation;
   final List<QuestionOption> options;
 
@@ -52,7 +54,9 @@ class Question {
     required this.concept,
     required this.difficulty,
     required this.questionText,
+    this.comprehensionText,
     this.imagePath,
+    this.diagramPath,
     required this.explanation,
     required this.options,
   });
@@ -67,7 +71,9 @@ class Question {
       'concept': concept,
       'difficulty': difficulty,
       'question_text': questionText,
+      'comprehension_text': comprehensionText,
       'image_path': imagePath,
+      'diagram_path': diagramPath,
       'explanation': explanation,
     };
   }
@@ -82,7 +88,9 @@ class Question {
       concept: map['concept'] as String,
       difficulty: map['difficulty'] as String,
       questionText: map['question_text'] as String,
+      comprehensionText: map['comprehension_text'] as String?,
       imagePath: map['image_path'] as String?,
+      diagramPath: map['diagram_path'] as String?,
       explanation: map['explanation'] as String,
       options: options,
     );
@@ -98,7 +106,9 @@ class Question {
       concept: concept,
       difficulty: difficulty,
       questionText: questionText,
+      comprehensionText: comprehensionText,
       imagePath: imagePath,
+      diagramPath: diagramPath,
       explanation: explanation,
       options: options ?? this.options,
     );
@@ -114,6 +124,7 @@ class QuizAttempt {
   final int totalQuestions;
   final int correctCount;
   final DateTime timestamp;
+  final String? learnerProfileId; // ← isolates attempts per learner
 
   QuizAttempt({
     required this.id,
@@ -124,6 +135,7 @@ class QuizAttempt {
     required this.totalQuestions,
     required this.correctCount,
     required this.timestamp,
+    this.learnerProfileId,
   });
 
   double get scorePercentage => (correctCount / (totalQuestions > 0 ? totalQuestions : 1)) * 100;
@@ -138,6 +150,7 @@ class QuizAttempt {
       'total_questions': totalQuestions,
       'correct_count': correctCount,
       'timestamp': timestamp.toIso8601String(),
+      'learner_profile_id': learnerProfileId,
     };
   }
 
@@ -151,9 +164,69 @@ class QuizAttempt {
       totalQuestions: map['total_questions'] as int,
       correctCount: map['correct_count'] as int,
       timestamp: DateTime.parse(map['timestamp'] as String),
+      learnerProfileId: map['learner_profile_id'] as String?,
     );
   }
 }
+
+// ─── Learner Profile ─────────────────────────────────────────────────────────
+
+class LearnerProfile {
+  final String id;
+  final String name;
+  final String avatar; // emoji avatar e.g. '🧒'
+  final int grade;
+  final String indigenousLanguage;
+  final DateTime createdAt;
+
+  LearnerProfile({
+    required this.id,
+    required this.name,
+    required this.avatar,
+    required this.grade,
+    required this.indigenousLanguage,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'avatar': avatar,
+      'grade': grade,
+      'indigenous_language': indigenousLanguage,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory LearnerProfile.fromMap(Map<String, dynamic> map) {
+    return LearnerProfile(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      avatar: map['avatar'] as String,
+      grade: map['grade'] as int,
+      indigenousLanguage: map['indigenous_language'] as String,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  LearnerProfile copyWith({
+    String? name,
+    String? avatar,
+    int? grade,
+    String? indigenousLanguage,
+  }) {
+    return LearnerProfile(
+      id: id,
+      name: name ?? this.name,
+      avatar: avatar ?? this.avatar,
+      grade: grade ?? this.grade,
+      indigenousLanguage: indigenousLanguage ?? this.indigenousLanguage,
+      createdAt: createdAt,
+    );
+  }
+}
+
 
 class AttemptAnswer {
   final String attemptId;
@@ -232,11 +305,13 @@ class UserSettings {
   final int selectedGrade;
   final String selectedIndigenousLang;
   final bool darkMode;
+  final bool isGradeLocked;
 
   UserSettings({
     required this.selectedGrade,
     required this.selectedIndigenousLang,
     required this.darkMode,
+    this.isGradeLocked = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -245,6 +320,7 @@ class UserSettings {
       'selected_grade': selectedGrade,
       'selected_indigenous_lang': selectedIndigenousLang,
       'dark_mode': darkMode ? 1 : 0,
+      'is_grade_locked': isGradeLocked ? 1 : 0,
     };
   }
 
@@ -252,7 +328,8 @@ class UserSettings {
     return UserSettings(
       selectedGrade: map['selected_grade'] as int,
       selectedIndigenousLang: map['selected_indigenous_lang'] as String,
-      darkMode: (map['dark_mode'] as int) == 1,
+      darkMode: (map['dark_mode'] as int? ?? 0) == 1,
+      isGradeLocked: (map['is_grade_locked'] as int? ?? 0) == 1,
     );
   }
 }

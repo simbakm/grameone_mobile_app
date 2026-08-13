@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../application/api_service.dart';
 import '../../application/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/whatsapp_utils.dart';
 import 'grade_selection_screen.dart';
 
 class ActivationScreen extends StatefulWidget {
@@ -13,173 +15,254 @@ class ActivationScreen extends StatefulWidget {
 }
 
 class _ActivationScreenState extends State<ActivationScreen> {
-  final TextEditingController _codeController = TextEditingController(text: 'GRAME-2026');
+  final TextEditingController _codeController = TextEditingController();
   String? _errorMessage;
+  String? _successMessage;
   bool _isLoading = false;
 
   Future<void> _handleActivation() async {
+    final rawInput = _codeController.text.trim().toUpperCase();
+    if (rawInput.isEmpty) {
+      setState(() => _errorMessage = 'Please enter an activation code.');
+      return;
+    }
+
+    final codes = rawInput.split(',').map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _successMessage = null;
     });
 
     final provider = Provider.of<AppProvider>(context, listen: false);
-    final success = await provider.activateLicense(_codeController.text);
+    final deviceId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
 
-    setState(() {
-      _isLoading = false;
-    });
+    Map<String, dynamic> result;
+    if (codes.length > 1) {
+      result = await ApiService.validateMultiLicenses(codes, deviceId);
+    } else {
+      result = await ApiService.validateLicense(codes.first, deviceId);
+    }
+
+    setState(() => _isLoading = false);
 
     if (!mounted) return;
 
-    if (success) {
+    if (result['valid'] == true) {
+      // Persist the activation locally
+      await provider.activateLicenseFromApi(
+        code: rawInput,
+        expiryDate: result['expiryDate'],
+        gradeIds: result['gradeIds'],
+        licenseType: result['licenseType'] ?? (codes.length > 1 ? 'MULTI_GRADE' : 'STANDARD'),
+      );
+
+      setState(() => _successMessage = result['message'] ?? 'Activation successful!');
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const GradeSelectionScreen()),
       );
     } else {
-      setState(() {
-        _errorMessage = 'Invalid activation code. Try "GRAME-2026" or "GRAME-FREE-DEMO".';
-      });
+      setState(() => _errorMessage = result['message'] ?? 'Invalid activation code.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
-    final deviceId = provider.licenseInfo?.deviceId ?? 'DEV-GRAME-2026';
+    final deviceId = provider.licenseInfo?.deviceId ?? '...';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Device Activation'),
-      ),
+      appBar: AppBar(title: const Text('Device Activation')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 16),
+
+            // ── Hero card ──────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.lightGreen,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.emeraldGreen, width: 1),
+                gradient: LinearGradient(
+                  colors: [AppColors.lightGreen, AppColors.emeraldGreen.withAlpha(30)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.emeraldGreen, width: 1.5),
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.security,
-                    size: 48,
-                    color: AppColors.emeraldGreen,
-                  ),
+                  const Icon(Icons.shield_outlined, size: 52, color: AppColors.emeraldGreen),
                   const SizedBox(height: 12),
                   const Text(
-                    'Offline License System',
+                    'Hardware Bound License',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.forestGreenDark,
+                      color: AppColors.deepMaroon,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   const Text(
-                    'GrameOne operates completely offline after activation.',
+                    'Your device ID is permanently tied to this device. It will remain the same even after reinstalling the app.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondaryLight,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderLight),
                     ),
+                    child: SelectableText(
+                      deviceId,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: AppColors.textPrimaryLight,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Share this ID with your supplier to get an activation code.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+
+            const SizedBox(height: 20),
+
+            // ── Activation input ───────────────────────────────────────────
             Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Unique Device Identifier',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgLight,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.borderLight),
-                      ),
-                      child: Text(
-                        deviceId,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimaryLight,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
                       'Enter Activation Code',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondaryLight,
-                      ),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     TextField(
                       controller: _codeController,
                       textCapitalization: TextCapitalization.characters,
+                      style: const TextStyle(letterSpacing: 2, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
-                        hintText: 'e.g. GRAME-2026',
-                        prefixIcon: const Icon(Icons.key, color: AppColors.royalGold),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        hintText: 'e.g. GRAME-XXXX-XXXX',
+                        prefixIcon: const Icon(Icons.vpn_key, color: AppColors.royalGold),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: AppColors.emeraldGreen, width: 2),
                         ),
                       ),
+                      onSubmitted: (_) => _isLoading ? null : _handleActivation(),
                     ),
+
                     if (_errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(
-                          color: AppColors.incorrectRed,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.error_outline, size: 16, color: AppColors.incorrectRed),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: AppColors.incorrectRed, fontSize: 13),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                    const SizedBox(height: 24),
+
+                    if (_successMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline, size: 16, color: AppColors.emeraldGreen),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _successMessage!,
+                              style: const TextStyle(color: AppColors.emeraldGreen, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleActivation,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.emeraldGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: AppColors.surfaceLight)
-                            : const Text('ACTIVATE APPLICATION'),
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              )
+                            : const Text(
+                                'ACTIVATE APPLICATION',
+                                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+                              ),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            // ── WhatsApp pre-filled support button (Requirement 8) ────────
+            Card(
+              color: const Color(0xFFDCFCE7),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.chat, color: Color(0xFF16A34A), size: 28),
+                title: const Text(
+                  'Need an Activation Code?',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Tap to chat with support on WhatsApp with your Device ID pre-filled.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                ),
+                trailing: const Icon(Icons.open_in_new, color: Color(0xFF16A34A)),
+                onTap: () {
+                  WhatsAppUtils.openSupportWhatsApp(
+                    context: context,
+                    message: 'Hello GrameOne Support, I need assistance obtaining an activation code for Device ID: $deviceId.',
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 32),
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../application/app_provider.dart';
 import '../../theme/app_theme.dart';
+import 'topics_screen.dart';
 
 class AnalyticsDashboardScreen extends StatelessWidget {
   const AnalyticsDashboardScreen({super.key});
@@ -58,6 +59,24 @@ class AnalyticsDashboardScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              children: [
+                                Text(
+                                  provider.activeLearner?.avatar ?? '🧒',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  provider.activeLearner?.name ?? 'Learner Analytics',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.royalGold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
                             Text(
                               '${provider.studyStreak} Day Study Streak!',
                               style: const TextStyle(
@@ -122,7 +141,7 @@ class AnalyticsDashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Weak Concepts Focus Area (Dynamic real data from DB)
+              // Weak Concepts Focus Area (Dynamic real data from DB - strictly < 90%, max 5)
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -138,7 +157,7 @@ class AnalyticsDashboardScreen extends StatelessWidget {
                           Icon(Icons.warning_amber_rounded, color: AppColors.deepMaroon),
                           SizedBox(width: 8),
                           Text(
-                            'Concepts Needing Attention',
+                            'Concepts Needing Attention (<90%)',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -152,7 +171,7 @@ class AnalyticsDashboardScreen extends StatelessWidget {
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
                           child: Text(
-                            'No weak concepts identified yet. Complete tests to generate concept analytics!',
+                            'No concepts currently need attention (<90% accuracy). Great work!',
                             style: TextStyle(
                               fontSize: 14,
                               color: AppColors.textSecondaryLight,
@@ -162,17 +181,93 @@ class AnalyticsDashboardScreen extends StatelessWidget {
                         )
                       else
                         ...provider.weakConceptsDetailed.map((concept) {
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            leading: const Icon(Icons.arrow_right, color: AppColors.deepMaroon),
-                            title: Text(
-                              '${concept.concept} (${concept.subject})',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              'Accuracy: ${concept.accuracyPercentage.toStringAsFixed(0)}% • ${concept.correctCount}/${concept.totalCount} correct',
-                              style: const TextStyle(color: AppColors.textSecondaryLight),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Card(
+                              elevation: 0,
+                              color: AppColors.bgLight,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: AppColors.borderLight),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () {
+                                  provider.setActiveSubject(concept.subject);
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => TopicsScreen(
+                                        initialSubject: concept.subject,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.arrow_right,
+                                        color: AppColors.deepMaroon,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${concept.concept} (${concept.subject})',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: AppColors.textPrimaryLight,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Accuracy: ${concept.accuracyPercentage.toStringAsFixed(0)}% • ${concept.correctCount}/${concept.totalCount} correct',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textSecondaryLight,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.lightMaroon,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Text(
+                                              'Practice',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.deepMaroon,
+                                              ),
+                                            ),
+                                            SizedBox(width: 2),
+                                            Icon(
+                                              Icons.chevron_right,
+                                              size: 14,
+                                              color: AppColors.deepMaroon,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         }),

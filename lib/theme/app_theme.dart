@@ -45,6 +45,12 @@ class AppColors {
   static const Color scienceTeal = Color(0xFF0D9488);
   static const Color englishPurple = Color(0xFF7C3AED);
   static const Color socialRose = Color(0xFFE11D48);
+
+  // Subject Card Background Colors
+  static const Color bgScience = Color(0xFFE6FFFA);
+  static const Color bgMath = Color(0xFFEFF6FF);
+  static const Color bgEnglish = Color(0xFFF5F3FF);
+  static const Color bgSocial = Color(0xFFFFF1F2);
 }
 
 class AppTheme {

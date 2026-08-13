@@ -32,6 +32,7 @@ class QuestionRepository {
     required int grade,
     String? subject,
     String? topic,
+    String? unit,
     String? indigenousLanguage,
     int? limit,
   }) async {
@@ -46,6 +47,10 @@ class QuestionRepository {
     if (topic != null && topic.isNotEmpty) {
       whereClause += ' AND topic = ?';
       whereArgs.add(topic);
+    }
+    if (unit != null && unit.isNotEmpty) {
+      whereClause += ' AND unit = ?';
+      whereArgs.add(unit);
     }
     // Indigenous language filtering:
     //  - When subject == 'Indigenous Language': restrict to the chosen language unit only.
@@ -93,10 +98,23 @@ class QuestionRepository {
   }) async {
     final db = await dbProvider.database;
     final List<Map<String, dynamic>> result = await db.rawQuery(
-      'SELECT DISTINCT topic FROM questions WHERE grade = ? AND subject = ?',
+      'SELECT DISTINCT topic FROM questions WHERE grade = ? AND subject = ? AND topic IS NOT NULL AND topic != "" ORDER BY topic ASC',
       [grade, subject],
     );
     return result.map((r) => r['topic'] as String).toList();
+  }
+
+  Future<List<String>> getUnitsForTopic({
+    required int grade,
+    required String subject,
+    required String topic,
+  }) async {
+    final db = await dbProvider.database;
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      'SELECT DISTINCT unit FROM questions WHERE grade = ? AND subject = ? AND topic = ? AND unit IS NOT NULL AND unit != "" ORDER BY unit ASC',
+      [grade, subject, topic],
+    );
+    return result.map((r) => r['unit'] as String).toList();
   }
 
   Future<int> getQuestionCount({required int grade}) async {
@@ -104,6 +122,23 @@ class QuestionRepository {
     final count = Sqflite.firstIntValue(
       await db.rawQuery('SELECT COUNT(*) FROM questions WHERE grade = ?', [grade]),
     );
+    return count ?? 0;
+  }
+
+  Future<int> getQuestionCountForUnit({
+    required int grade,
+    required String subject,
+    required String topic,
+    String? unit,
+  }) async {
+    final db = await dbProvider.database;
+    String sql = 'SELECT COUNT(*) FROM questions WHERE grade = ? AND subject = ? AND topic = ?';
+    List<dynamic> args = [grade, subject, topic];
+    if (unit != null && unit.isNotEmpty) {
+      sql += ' AND unit = ?';
+      args.add(unit);
+    }
+    final count = Sqflite.firstIntValue(await db.rawQuery(sql, args));
     return count ?? 0;
   }
 

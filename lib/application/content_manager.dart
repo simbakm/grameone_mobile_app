@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/models.dart';
 import '../data/repositories/question_repository.dart';
 
@@ -9,12 +10,11 @@ class ContentManager {
 
   Future<void> seedDefaultQuestionsIfEmpty() async {
     final count = await questionRepository.getQuestionCount(grade: 7);
-    // Re-seed if DB is empty OR if the question bank is smaller than expected
-    // (catches upgrades where we added more questions).
-    if (count >= _minExpectedQuestions) return;
+    if (count > 0) return; // Keep existing questions, do not overwrite
 
-    // Clear existing questions so we don't get duplicate-key errors.
-    await questionRepository.deleteAllQuestions(grade: 7);
+    final prefs = await SharedPreferences.getInstance();
+    final hasDownloadedVersion = prefs.containsKey('content_version_7');
+    if (hasDownloadedVersion) return; // Content package downloaded, do not seed mock data
 
     List<Question> seedQuestions = [];
 
@@ -27,10 +27,6 @@ class ContentManager {
 
     await questionRepository.insertQuestions(seedQuestions);
   }
-
-  /// Minimum question count expected in the DB for grade 7.
-  /// If the actual count is below this, a re-seed is triggered.
-  static const int _minExpectedQuestions = 38;
 
   // ─────────────────────────────────────────────────────────────────────────
   // SCIENCE – 10 questions

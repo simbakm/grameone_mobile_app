@@ -2,7 +2,7 @@ import 'dart:math';
 import '../data/models/models.dart';
 import '../data/repositories/question_repository.dart';
 
-enum TestType { practice, revision, dailyChallenge }
+enum TestType { practice, revision, topicRevision, dailyChallenge }
 
 class QuizEngine {
   final QuestionRepository questionRepository;
@@ -16,12 +16,15 @@ class QuizEngine {
     required TestType testType,
     String? subject,
     String? topic,
+    String? unit,
     String? indigenousLanguage,
   }) async {
     List<Question> allQuestions = await questionRepository.getQuestions(
       grade: grade,
       subject: subject,
       topic: topic,
+      // For topicRevision: fetch ALL units in the topic (no unit filter)
+      unit: testType == TestType.topicRevision ? null : unit,
       indigenousLanguage: indigenousLanguage,
     );
 
@@ -29,14 +32,23 @@ class QuizEngine {
       return [];
     }
 
-    int targetCount = 15;
-    if (testType == TestType.revision) {
-      targetCount = 40;
-    } else if (testType == TestType.dailyChallenge) {
-      targetCount = 5;
+    int targetCount;
+    switch (testType) {
+      case TestType.revision:
+        targetCount = 40; // Subject-level revision = 40 questions
+        break;
+      case TestType.topicRevision:
+        targetCount = 40; // End-of-topic revision test = 40 questions
+        break;
+      case TestType.dailyChallenge:
+        targetCount = 5;
+        break;
+      case TestType.practice:
+        targetCount = 20; // Max 20 per unit practice session
+        break;
     }
 
-    // Shuffle questions
+    // Shuffle questions every time for fresh randomized order
     allQuestions.shuffle(_random);
     List<Question> selected = allQuestions.take(targetCount).toList();
 

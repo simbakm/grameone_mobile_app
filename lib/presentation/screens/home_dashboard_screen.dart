@@ -3,15 +3,25 @@ import 'package:provider/provider.dart';
 
 import '../../application/app_provider.dart';
 import '../../application/quiz_engine.dart';
+import '../../data/models/models.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/whatsapp_utils.dart';
+import 'activation_screen.dart';
 import 'analytics_dashboard_screen.dart';
 import 'parent_dashboard_screen.dart';
 import 'quiz_screen.dart';
+import 'revision_subject_selection_screen.dart';
 import 'settings_screen.dart';
-import 'topics_screen.dart';
+import 'subject_selection_screen.dart';
 
-class HomeDashboardScreen extends StatelessWidget {
+class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
+
+  @override
+  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+}
+
+class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   void _showBadgesDialog(BuildContext context) {
     final provider = Provider.of<AppProvider>(context, listen: false);
@@ -65,11 +75,282 @@ class HomeDashboardScreen extends StatelessWidget {
     );
   }
 
+  /// Simple switcher popup showing only registered learners (only when 2+ exist)
+  void _showSimpleLearnerSwitcher(BuildContext context, AppProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.swap_horiz, color: AppColors.emeraldGreen),
+            SizedBox(width: 8),
+            Text('Switch Learner'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: provider.learnerProfiles.map((profile) {
+            final isSelected = provider.activeLearner?.id == profile.id;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.lightGreen : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? AppColors.emeraldGreen : AppColors.borderLight,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: ListTile(
+                leading: Text(profile.avatar, style: const TextStyle(fontSize: 24)),
+                title: Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Grade ${profile.grade} • ${profile.indigenousLanguage}'),
+                trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.emeraldGreen) : null,
+                onTap: () {
+                  provider.switchLearnerProfile(profile);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDismissableExpiryAlert(BuildContext context, AppProvider provider, LicenseInfo? license) {
+    if (license == null || !license.isActivated || license.expiryDate == null) {
+      return Container();
+    }
+
+    final now = DateTime.now();
+    final remaining = license.expiryDate!.difference(now);
+    final days = remaining.inDays;
+    final hours = remaining.inHours;
+
+    int thresholdDay;
+    Color bannerBg = AppColors.lightGreen;
+    Color textColor = AppColors.emeraldGreen;
+    IconData icon = Icons.verified_user_outlined;
+    String text = '';
+
+    if (remaining.isNegative) {
+      thresholdDay = 0;
+      bannerBg = AppColors.lightMaroon;
+      textColor = AppColors.incorrectRed;
+      icon = Icons.warning_amber_rounded;
+      text = 'License Expired. Renew in settings.';
+    } else if (days <= 1) {
+      thresholdDay = 1;
+      bannerBg = AppColors.lightMaroon;
+      textColor = AppColors.incorrectRed;
+      icon = Icons.alarm;
+      text = 'License Renewal Urgent: $hours hours remaining!';
+    } else if (days <= 3) {
+      thresholdDay = 3;
+      bannerBg = Colors.orange.shade50;
+      textColor = Colors.deepOrange;
+      icon = Icons.timer_outlined;
+      text = 'License Renewal: $days days remaining';
+    } else if (days <= 7) {
+      thresholdDay = 7;
+      bannerBg = AppColors.lightGold;
+      textColor = AppColors.royalGold;
+      icon = Icons.event_available;
+      text = 'License Renewal: 1 week remaining ($days days)';
+    } else if (days <= 14) {
+      thresholdDay = 14;
+      bannerBg = AppColors.lightGold;
+      textColor = AppColors.royalGold;
+      icon = Icons.event_available;
+      text = 'License Renewal: 2 weeks remaining ($days days)';
+    } else if (days <= 28) {
+      thresholdDay = 28;
+      bannerBg = AppColors.lightGreen;
+      textColor = AppColors.emeraldGreen;
+      icon = Icons.event_available;
+      text = 'License Renewal: 4 weeks remaining ($days days)';
+    } else {
+      return Container(); // Hide banner completely if > 28 days remaining
+    }
+
+    // Do not show if learner already dismissed this threshold during session
+    if (provider.dismissedExpiryThresholdDay == thresholdDay) {
+      return Container();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: bannerBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withAlpha(120), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: textColor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close, size: 18, color: textColor),
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+            onPressed: () => provider.dismissExpiryThreshold(thresholdDay),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpiredLicenseLockView(BuildContext context, AppProvider provider) {
+    final deviceId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('GrameOne - License Expired'),
+        automaticallyImplyLeading: false,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: AppColors.lightMaroon,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_clock_outlined,
+                  size: 64,
+                  color: AppColors.incorrectRed,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'License Expired',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.deepMaroon,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Your GrameOne access license has expired. Please enter a valid activation code or renew your subscription to continue using lessons and quizzes.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondaryLight,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Device ID Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Column(
+                  children: [
+                    const Text('Device ID:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondaryLight)),
+                    const SizedBox(height: 4),
+                    SelectableText(
+                      deviceId,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ActivationScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.key),
+                  label: const Text('RENEW LICENSE NOW'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.deepMaroon,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    WhatsAppUtils.openSupportWhatsApp(
+                      context: context,
+                      message: 'Hello GrameOne Support, I need assistance renewing my license for Device ID: $deviceId.',
+                    );
+                  },
+                  icon: const Icon(Icons.chat, color: Color(0xFF16A34A)),
+                  label: const Text('Contact Support on WhatsApp', style: TextStyle(color: Color(0xFF16A34A))),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
-    final grade = provider.settings?.selectedGrade ?? 7;
-    final isActivated = provider.licenseInfo?.isActivated ?? false;
+    final license = provider.licenseInfo;
+    final bool isExpired = license != null &&
+        license.isActivated &&
+        license.expiryDate != null &&
+        license.expiryDate!.isBefore(DateTime.now());
+
+    if (isExpired) {
+      return _buildExpiredLicenseLockView(context, provider);
+    }
+
+    final activeLearner = provider.activeLearner;
+    final grade = provider.currentGrade;
+    final isActivated = license?.isActivated ?? false;
+    final hasMultipleLearners = provider.learnerProfiles.length >= 2;
 
     return Scaffold(
       appBar: AppBar(
@@ -91,7 +372,7 @@ class HomeDashboardScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Welcome Banner
+              // Clean Welcome Banner
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -102,15 +383,52 @@ class HomeDashboardScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Welcome, Learner!',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.deepMaroon,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                activeLearner?.avatar ?? '🧒',
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Welcome, ${activeLearner?.name ?? "Learner"}!',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.deepMaroon,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Show switcher ONLY if 2 or more learners exist
+                          if (hasMultipleLearners) ...[
+                            InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => _showSimpleLearnerSwitcher(context, provider),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightGreen,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.emeraldGreen),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.swap_horiz, size: 16, color: AppColors.emeraldGreen),
+                                    SizedBox(width: 4),
+                                    Text('Switch', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.emeraldGreen)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
                           Container(
@@ -137,7 +455,11 @@ class HomeDashboardScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 12),
+
+              // Dismissable threshold alert banner (dismissable by user)
+              _buildDismissableExpiryAlert(context, provider, provider.licenseInfo),
 
               // 6 Action Grid Cards (2 Columns)
               GridView.count(
@@ -151,10 +473,12 @@ class HomeDashboardScreen extends StatelessWidget {
                   _buildDashboardGridCard(
                     context: context,
                     icon: Icons.import_contacts,
-                    title: 'Topics',
+                    title: 'Subjects',
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TopicsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const SubjectSelectionScreen(),
+                        ),
                       );
                     },
                   ),
@@ -162,11 +486,12 @@ class HomeDashboardScreen extends StatelessWidget {
                     context: context,
                     icon: Icons.quiz_outlined,
                     title: 'Revision Test',
-                    onTap: () async {
-                      await provider.startQuiz(testType: TestType.revision);
-                      if (!context.mounted) return;
+                    onTap: () {
+                      // Revision Test: pick subject then start quiz immediately
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const QuizScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const RevisionSubjectSelectionScreen(),
+                        ),
                       );
                     },
                   ),
@@ -258,13 +583,13 @@ class HomeDashboardScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Icon(
-                              Icons.check_circle_rounded,
-                              color: AppColors.emeraldGreen,
+                              Icons.local_fire_department_rounded,
+                              color: Colors.deepOrange,
                               size: 28,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${provider.testsDone}',
+                              '${provider.studyStreak} Days',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -272,7 +597,7 @@ class HomeDashboardScreen extends StatelessWidget {
                               ),
                             ),
                             const Text(
-                              'Tests Done',
+                              'Study Streak',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textSecondaryLight,
@@ -300,23 +625,34 @@ class HomeDashboardScreen extends StatelessWidget {
   }) {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.borderLight),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 40,
-                color: AppColors.deepMaroon,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: AppColors.lightGreen,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: AppColors.emeraldGreen,
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 title,
-                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,

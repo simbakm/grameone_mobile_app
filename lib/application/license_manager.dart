@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/models.dart';
 import '../../data/repositories/license_repository.dart';
@@ -18,13 +22,57 @@ class LicenseManager {
   LicenseManager({LicenseRepository? licenseRepository})
       : licenseRepository = licenseRepository ?? LicenseRepository();
 
+  /// Returns a stable hardware-bound device ID.
+  ///
+  /// Priority:
+  ///   1. Android: ANDROID_ID — unique per device, survives app reinstalls.
+  ///   2. iOS: identifierForVendor — stable per app-install bundle (may reset on full reinstall).
+  ///   3. Fallback: a deterministic SHA-256 hash stored in SharedPreferences.
+  ///
+  /// The result is cached in SharedPreferences for performance, but the
+  /// authoritative value always comes from the hardware APIs above.
   Future<String> getDeviceId() async {
-    // Generate a consistent pseudo device ID for offline platform binding
-    final String raw = 'GRAMEONE_DEVICE_ID_ZIMBABWE_OFFLINE';
-    final bytes = utf8.encode(raw);
-    final digest = sha256.convert(bytes);
-    final String hashStr = digest.toString().substring(0, 16).toUpperCase();
-    return 'DEV-$hashStr';
+    final prefs = await SharedPreferences.getInstance();
+    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    String? rawHardwareId;
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        // ANDROID_ID: unique per device + user, survives reinstalls.
+        // It resets only on factory reset or if the device bootloader
+        // signs a different app package (very rare in production).
+        rawHardwareId = androidInfo.id; // Settings.Secure.ANDROID_ID
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        rawHardwareId = iosInfo.identifierForVendor;
+      }
+    } catch (_) {
+      rawHardwareId = null;
+    }
+
+    if (rawHardwareId != null && rawHardwareId.isNotEmpty && rawHardwareId != 'unknown') {
+      // Hash the raw hardware ID so we never expose the naked ANDROID_ID
+      final digest = sha256.convert(utf8.encode('GRAME_$rawHardwareId'));
+      final devId = 'DEV-${digest.toString().substring(0, 12).toUpperCase()}';
+      // Cache it for speed on future calls
+      await prefs.setString('grame_unique_device_id', devId);
+      return devId;
+    }
+
+    // ── Fallback: emulator or platform without hardware ID ──────────────────
+    // Use a previously generated random ID stored in SharedPreferences.
+    // This is NOT reinstall-proof but is the best we can do without hardware.
+    String? cached = prefs.getString('grame_unique_device_id');
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    final random = Random.secure();
+    final values = List<int>.generate(16, (i) => random.nextInt(256));
+    final raw = '${DateTime.now().microsecondsSinceEpoch}-${values.join()}';
+    final digest = sha256.convert(utf8.encode(raw));
+    final fallbackId = 'DEV-${digest.toString().substring(0, 12).toUpperCase()}';
+    await prefs.setString('grame_unique_device_id', fallbackId);
+    return fallbackId;
   }
 
   Future<LicenseInfo> initLicense() async {
