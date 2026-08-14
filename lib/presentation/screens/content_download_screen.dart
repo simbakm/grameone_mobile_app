@@ -362,7 +362,7 @@ class _ContentDownloadScreenState extends State<ContentDownloadScreen>
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
                             child: Text(
-                              widget.isUpdateMode ? '← Return to Settings' : 'Continue →',
+                              widget.isUpdateMode ? 'Return' : 'Continue →',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),

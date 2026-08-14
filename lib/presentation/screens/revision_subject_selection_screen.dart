@@ -7,8 +7,7 @@ import '../../theme/app_theme.dart';
 import 'quiz_screen.dart';
 
 /// A focused subject-picker shown exclusively for the Revision Test flow.
-/// Tapping a subject card immediately starts a revision quiz based on
-/// concepts the learner has already covered.
+/// Uses the clean centered card layout matching Screenshot 1.
 class RevisionSubjectSelectionScreen extends StatelessWidget {
   const RevisionSubjectSelectionScreen({super.key});
 
@@ -19,7 +18,7 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
       icon: Icons.calculate_outlined,
       accent: AppColors.mathBlue,
       background: AppColors.bgMath,
-      subtitle: 'Numbers, operations, shapes & measurement',
+      subtitle: 'Numbers, shapes & measurement',
     ),
     _SubjectMeta(
       key: 'English Language',
@@ -39,11 +38,11 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
     ),
     _SubjectMeta(
       key: 'Agriculture, Science and Technology and ICT',
-      displayName: 'Agriculture, Science & Tech & ICT',
+      displayName: 'Agriculture, Science & ICT',
       icon: Icons.science_outlined,
       accent: AppColors.scienceTeal,
       background: AppColors.bgScience,
-      subtitle: 'Farming, nature, computing & technology',
+      subtitle: 'Farming, nature, computing & tech',
     ),
     _SubjectMeta(
       key: 'Social Sciences',
@@ -51,7 +50,7 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
       icon: Icons.public_outlined,
       accent: AppColors.socialRose,
       background: AppColors.bgSocial,
-      subtitle: 'Heritage, culture, family & community',
+      subtitle: 'Heritage, culture & government',
     ),
     _SubjectMeta(
       key: 'Physical Education and Arts',
@@ -59,7 +58,7 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
       icon: Icons.sports_soccer_outlined,
       accent: AppColors.emeraldGreen,
       background: AppColors.lightGreen,
-      subtitle: 'Fitness, sports, music & visual arts',
+      subtitle: 'Fitness, sports, music & arts',
     ),
   ];
 
@@ -120,14 +119,14 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Padding(
                 padding: EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Select a ZIMSEC subject to start a revision test based on concepts you have covered so far.',
+                  'Select a ZIMSEC subject to start a revision test based on concepts covered so far.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondaryLight,
@@ -141,53 +140,46 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
                 itemCount: _subjects.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.82,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.85,
                 ),
                 itemBuilder: (context, index) {
                   final meta = _subjects[index];
                   final isIndigenous = meta.key == 'Indigenous Language';
-                  final titleText = isIndigenous
-                      ? 'Indigenous Language ($selectedLang)'
-                      : meta.displayName;
-                  final subtitleText = isIndigenous
-                      ? 'Shona, Ndebele & local languages'
-                      : (meta.subtitle ?? '');
 
                   return Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 3,
-                    shadowColor: Colors.black.withAlpha(20),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: meta.accent.withAlpha(100),
+                        color: meta.accent.withAlpha(70),
                         width: 1.5,
                       ),
                     ),
+                    color: Colors.white,
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
                       onTap: () => _startRevision(context, provider, meta.key),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: meta.background,
-                        ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Container(
-                              width: 44,
-                              height: 44,
+                              width: 50,
+                              height: 50,
                               decoration: BoxDecoration(
-                                color: meta.accent.withAlpha(40),
+                                color: meta.accent.withAlpha(26),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(meta.icon, color: meta.accent, size: 24),
+                              child: Icon(meta.icon, color: meta.accent, size: 26),
                             ),
-                            const Spacer(),
+                            const SizedBox(height: 12),
                             Text(
-                              titleText,
+                              isIndigenous ? 'Indigenous Language' : meta.displayName,
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -198,16 +190,28 @@ class RevisionSubjectSelectionScreen extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              subtitleText,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondaryLight,
-                                height: 1.2,
+                            if (isIndigenous)
+                              Text(
+                                selectedLang,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.royalGold,
+                                ),
+                              )
+                            else if (meta.subtitle != null)
+                              Text(
+                                meta.subtitle!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondaryLight,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ],
                         ),
                       ),

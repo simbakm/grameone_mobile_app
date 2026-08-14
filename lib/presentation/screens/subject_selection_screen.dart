@@ -5,9 +5,7 @@ import '../../application/app_provider.dart';
 import '../../theme/app_theme.dart';
 import 'topics_screen.dart';
 
-/// Intermediate "Select a Subject" screen shown when the learner taps the
-/// Subjects card on the dashboard. Each subject is presented as a large,
-/// tappable card with official ZIMSEC subject names.
+/// "Select a Subject" screen matching original elegant centered card design (Screenshot 1).
 class SubjectSelectionScreen extends StatelessWidget {
   const SubjectSelectionScreen({super.key});
 
@@ -19,7 +17,7 @@ class SubjectSelectionScreen extends StatelessWidget {
       icon: Icons.calculate_outlined,
       accent: AppColors.mathBlue,
       background: AppColors.bgMath,
-      subtitle: 'Numbers, operations, shapes & measurement',
+      subtitle: 'Numbers, shapes & measurement',
     ),
     _SubjectMeta(
       key: 'English Language',
@@ -35,15 +33,15 @@ class SubjectSelectionScreen extends StatelessWidget {
       icon: Icons.record_voice_over_outlined,
       accent: AppColors.royalGold,
       background: AppColors.lightGold,
-      subtitle: null, // resolved dynamically from settings
+      subtitle: null, // Displays selected language name underneath (e.g. Shona)
     ),
     _SubjectMeta(
       key: 'Agriculture, Science and Technology and ICT',
-      displayName: 'Agriculture, Science and Tech & ICT',
+      displayName: 'Agriculture, Science & ICT',
       icon: Icons.science_outlined,
       accent: AppColors.scienceTeal,
       background: AppColors.bgScience,
-      subtitle: 'Farming, nature, computing & technology',
+      subtitle: 'Farming, nature, computing & tech',
     ),
     _SubjectMeta(
       key: 'Social Sciences',
@@ -51,7 +49,7 @@ class SubjectSelectionScreen extends StatelessWidget {
       icon: Icons.public_outlined,
       accent: AppColors.socialRose,
       background: AppColors.bgSocial,
-      subtitle: 'Heritage, culture, family & community',
+      subtitle: 'Heritage, culture & government',
     ),
     _SubjectMeta(
       key: 'Physical Education and Arts',
@@ -59,7 +57,7 @@ class SubjectSelectionScreen extends StatelessWidget {
       icon: Icons.sports_soccer_outlined,
       accent: AppColors.emeraldGreen,
       background: AppColors.lightGreen,
-      subtitle: 'Fitness, sports, music & visual arts',
+      subtitle: 'Fitness, sports, music & arts',
     ),
   ];
 
@@ -74,7 +72,7 @@ class SubjectSelectionScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -82,7 +80,7 @@ class SubjectSelectionScreen extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Choose a ZIMSEC subject to browse topics & practice',
+                  'Choose a subject to browse its topics',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondaryLight,
@@ -90,39 +88,33 @@ class SubjectSelectionScreen extends StatelessWidget {
                 ),
               ),
 
-              // 2-column subject grid
+              // 2-column subject grid (Screenshot 1 design)
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _subjects.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.82,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.85,
                 ),
                 itemBuilder: (context, index) {
                   final meta = _subjects[index];
                   final isIndigenous = meta.key == 'Indigenous Language';
-                  final titleText = isIndigenous
-                      ? 'Indigenous Language ($selectedLang)'
-                      : meta.displayName;
-                  final subtitleText = isIndigenous
-                      ? 'Shona, Ndebele & local languages'
-                      : (meta.subtitle ?? '');
 
                   return Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 3,
-                    shadowColor: Colors.black.withAlpha(20),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: meta.accent.withAlpha(100),
+                        color: meta.accent.withAlpha(70),
                         width: 1.5,
                       ),
                     ),
+                    color: Colors.white,
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
                       onTap: () {
                         provider.setActiveSubject(meta.key);
                         Navigator.of(context).push(
@@ -131,30 +123,29 @@ class SubjectSelectionScreen extends StatelessWidget {
                           ),
                         );
                       },
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: meta.background,
-                        ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Icon circle
+                            // Centered circular icon
                             Container(
-                              width: 44,
-                              height: 44,
+                              width: 50,
+                              height: 50,
                               decoration: BoxDecoration(
-                                color: meta.accent.withAlpha(40),
+                                color: meta.accent.withAlpha(26),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(meta.icon, color: meta.accent, size: 24),
+                              child: Icon(meta.icon, color: meta.accent, size: 26),
                             ),
-                            const Spacer(),
+                            const SizedBox(height: 12),
 
-                            // Subject title
+                            // Centered Subject Title
                             Text(
-                              titleText,
-                              style: TextStyle(
+                              isIndigenous ? 'Indigenous Language' : meta.displayName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.textPrimaryLight,
@@ -165,17 +156,29 @@ class SubjectSelectionScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
 
-                            // Subtitle
-                            Text(
-                              subtitleText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondaryLight,
-                                height: 1.2,
+                            // Subtitle underneath
+                            if (isIndigenous)
+                              Text(
+                                selectedLang,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.royalGold,
+                                ),
+                              )
+                            else if (meta.subtitle != null)
+                              Text(
+                                meta.subtitle!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondaryLight,
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ],
                         ),
                       ),
