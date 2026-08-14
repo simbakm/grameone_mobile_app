@@ -45,9 +45,23 @@ class ContentDownloadService {
         return false;
       }
 
-      if (packageInfo['hasPackage'] == false || (packageInfo['downloadUrl'] as String).isEmpty) {
+      if (packageInfo['hasPackage'] == false || (packageInfo['downloadUrl'] as String? ?? '').isEmpty) {
         debugPrint('ℹ️ [DEBUG] No package available for Grade $gradeId yet.');
         onMessage(packageInfo['message'] as String? ?? 'No downloadable content available for Grade $gradeId yet.');
+        onStage(DownloadStage.done);
+        return false;
+      }
+
+      final serverVersion = packageInfo['version'] as String? ?? '1.0.0';
+      final downloadUrl = packageInfo['downloadUrl'] as String? ?? '';
+      final localVersion = await getLocalVersion(gradeId);
+
+      debugPrint('ℹ️ [DEBUG] Grade $gradeId - Local Version: $localVersion | Server Version: $serverVersion');
+      debugPrint('ℹ️ [DEBUG] Download URL: $downloadUrl');
+
+      if (localVersion == serverVersion && downloadUrl.isNotEmpty) {
+        debugPrint('✅ [DEBUG] Content is up to date (v$serverVersion). Skipping download.');
+        onMessage('Content is already up to date (v$serverVersion).');
         onStage(DownloadStage.done);
         return false;
       }
