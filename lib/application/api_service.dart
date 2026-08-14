@@ -100,19 +100,39 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
-        // Backend returns 'packageUrl' or 'downloadUrl' — map to our internal 'downloadUrl'
+        if (body['hasPackage'] == false || body['downloadUrl'] == null || body['downloadUrl'].toString().isEmpty) {
+          return {
+            'version': body['version']?.toString() ?? '0.0.0',
+            'downloadUrl': '',
+            'sizeBytes': 0,
+            'gradeId': gradeId,
+            'hasPackage': false,
+            'message': body['message'] ?? 'No content published yet for Grade $gradeId',
+          };
+        }
         final String rawUrl = (body['packageUrl'] ?? body['downloadUrl'] ?? '').toString();
-        // If it's a relative path, prepend the base URL
         final String fullUrl = rawUrl.startsWith('http') ? rawUrl : '$_baseUrl$rawUrl';
         return {
           'version': body['version']?.toString() ?? '1.0.0',
           'downloadUrl': fullUrl,
           'sizeBytes': body['packageSizeBytes'] as int? ?? 0,
           'gradeId': gradeId,
+          'hasPackage': true,
+        };
+      }
+      if (response.statusCode == 404) {
+        return {
+          'version': '0.0.0',
+          'downloadUrl': '',
+          'sizeBytes': 0,
+          'gradeId': gradeId,
+          'hasPackage': false,
+          'message': 'No content package published for Grade $gradeId yet.',
         };
       }
       return null;
     } catch (e) {
+      debugPrint('❌ [DEBUG] Network error reaching server: $e');
       return null;
     }
   }

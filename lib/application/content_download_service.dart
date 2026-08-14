@@ -40,28 +40,14 @@ class ContentDownloadService {
       final packageInfo = await ApiService.getLatestGradePackage(gradeId);
       if (packageInfo == null) {
         debugPrint('⚠️ [DEBUG] Could not reach server to fetch package info for Grade $gradeId');
-        onMessage('Could not reach server. Using existing content.');
+        onMessage('Could not reach server. Check your internet connection.');
         onStage(DownloadStage.done);
         return false;
       }
 
-      final serverVersion = packageInfo['version'] as String;
-      final downloadUrl = packageInfo['downloadUrl'] as String;
-      final localVersion = await getLocalVersion(gradeId);
-
-      debugPrint('ℹ️ [DEBUG] Grade $gradeId - Local Version: $localVersion | Server Version: $serverVersion');
-      debugPrint('ℹ️ [DEBUG] Download URL: $downloadUrl');
-
-      if (localVersion == serverVersion && downloadUrl.isNotEmpty) {
-        debugPrint('✅ [DEBUG] Content is up to date (v$serverVersion). Skipping download.');
-        onMessage('Content is already up to date (v$serverVersion).');
-        onStage(DownloadStage.done);
-        return false;
-      }
-
-      if (downloadUrl.isEmpty) {
-        debugPrint('⚠️ [DEBUG] Download URL is empty for Grade $gradeId.');
-        onMessage('No downloadable content available for Grade $gradeId yet.');
+      if (packageInfo['hasPackage'] == false || (packageInfo['downloadUrl'] as String).isEmpty) {
+        debugPrint('ℹ️ [DEBUG] No package available for Grade $gradeId yet.');
+        onMessage(packageInfo['message'] as String? ?? 'No downloadable content available for Grade $gradeId yet.');
         onStage(DownloadStage.done);
         return false;
       }
