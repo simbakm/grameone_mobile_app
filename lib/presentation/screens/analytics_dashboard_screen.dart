@@ -13,12 +13,12 @@ class AnalyticsDashboardScreen extends StatelessWidget {
     final provider = Provider.of<AppProvider>(context);
     final selectedLang = provider.settings?.selectedIndigenousLang ?? 'Shona';
     final subjects = [
-      'Science',
       'Mathematics',
-      'English',
-      'Agriculture',
-      'Social Science',
+      'English Language',
       'Indigenous Language',
+      'Agriculture, Science and Technology and ICT',
+      'Social Sciences',
+      'Physical Education and Arts',
     ];
 
     return Scaffold(

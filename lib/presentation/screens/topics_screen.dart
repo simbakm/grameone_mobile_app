@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../application/app_provider.dart';
 import '../../data/repositories/analytics_repository.dart';
 import '../../theme/app_theme.dart';
+import '../widgets/no_content_widget.dart';
 import 'units_screen.dart';
 
 class TopicsScreen extends StatefulWidget {
@@ -21,18 +22,18 @@ class _TopicsScreenState extends State<TopicsScreen> {
   bool _isLoading = true;
 
   static const List<String> _allSubjects = [
-    'Science',
     'Mathematics',
-    'English',
-    'Agriculture',
-    'Social Science',
+    'English Language',
     'Indigenous Language',
+    'Agriculture, Science and Technology and ICT',
+    'Social Sciences',
+    'Physical Education and Arts',
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedSubject = widget.initialSubject ?? 'Science';
+    _selectedSubject = widget.initialSubject ?? 'Mathematics';
     _loadTopics();
   }
 
@@ -106,19 +107,26 @@ class _TopicsScreenState extends State<TopicsScreen> {
                       Expanded(
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
-                            value: _selectedSubject,
+                            value: _allSubjects.contains(_selectedSubject) ? _selectedSubject : _allSubjects.first,
                             isExpanded: true,
                             items: _allSubjects.map((String sub) {
+                              String label = sub;
+                              if (sub == 'Indigenous Language') {
+                                label = 'Indigenous ($selectedLang)';
+                              } else if (sub == 'Agriculture, Science and Technology and ICT') {
+                                label = 'Agriculture, Science & ICT';
+                              } else if (sub == 'Physical Education and Arts') {
+                                label = 'Physical Education & Arts';
+                              }
                               return DropdownMenuItem<String>(
                                 value: sub,
                                 child: Text(
-                                  sub == 'Indigenous Language'
-                                      ? 'Indigenous ($selectedLang)'
-                                      : sub,
+                                  label,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.emeraldGreen,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               );
                             }).toList(),
@@ -138,7 +146,7 @@ class _TopicsScreenState extends State<TopicsScreen> {
                         child: CircularProgressIndicator(color: AppColors.emeraldGreen),
                       )
                     : _dynamicTopics.isEmpty
-                        ? _buildEmptyState()
+                        ? NoContentWidget(subjectName: _selectedSubject)
                         : ListView.builder(
                             itemCount: _dynamicTopics.length,
                             itemBuilder: (context, index) {
@@ -146,15 +154,15 @@ class _TopicsScreenState extends State<TopicsScreen> {
                               final int number = index + 1;
                               final progress = _progressMap[topicTitle];
 
-                              Color badgeColor = AppColors.borderLight;
-                              Color textColor = AppColors.textSecondaryLight;
+                              Color badgeColor = AppColors.surfaceLight;
+                              Color textColor = AppColors.textPrimaryLight;
                               String badgeText = 'Not Started';
                               IconData badgeIcon = Icons.hourglass_empty;
 
                               if (progress != null && progress.status == ProgressStatus.completed) {
                                 badgeColor = AppColors.lightGreen;
                                 textColor = AppColors.emeraldGreen;
-                                badgeText = '✓ Done (${progress.scorePercentage.toStringAsFixed(0)}%)';
+                                badgeText = '✓ Completed (${progress.scorePercentage.toStringAsFixed(0)}%)';
                                 badgeIcon = Icons.check_circle;
                               } else if (progress != null && progress.status == ProgressStatus.inProgress) {
                                 badgeColor = AppColors.lightGold;
@@ -274,31 +282,6 @@ class _TopicsScreenState extends State<TopicsScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.topic_outlined, size: 56, color: AppColors.textSecondaryLight),
-            const SizedBox(height: 16),
-            Text(
-              'No Topics Found for $_selectedSubject',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Ensure you have downloaded the content package for your grade.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondaryLight),
-            ),
-          ],
         ),
       ),
     );

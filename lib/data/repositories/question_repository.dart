@@ -8,6 +8,52 @@ class QuestionRepository {
   QuestionRepository({AppDatabase? dbProvider})
       : dbProvider = dbProvider ?? AppDatabase.instance;
 
+  /// Helper to build flexible subject SQL conditions so variations like 'Shona', 'ChiShona',
+  /// 'Mathematics', 'Maths', 'Agriculture, Science and Technology and ICT', 'Science', etc.
+  /// are all matched seamlessly.
+  static String _buildSubjectCondition(String subject, List<dynamic> whereArgs) {
+    final s = subject.toLowerCase().trim();
+
+    if (s.contains('math')) {
+      whereArgs.add('%math%');
+      return 'LOWER(subject) LIKE ?';
+    } else if (s.contains('english')) {
+      whereArgs.add('%english%');
+      return 'LOWER(subject) LIKE ?';
+    } else if (s.contains('social')) {
+      whereArgs.add('%social%');
+      return 'LOWER(subject) LIKE ?';
+    } else if (s.contains('physic') || s.contains('art') || s.contains('pe') || s.contains('sport')) {
+      whereArgs.add('%physic%');
+      whereArgs.add('%art%');
+      whereArgs.add('%pe%');
+      whereArgs.add('%sport%');
+      return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ?)';
+    } else if (s.contains('agri') || s.contains('sci') || s.contains('ict') || s.contains('tech')) {
+      whereArgs.add('%agri%');
+      whereArgs.add('%sci%');
+      whereArgs.add('%ict%');
+      whereArgs.add('%tech%');
+      return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ?)';
+    } else if (s.contains('indigenous') || s.contains('shona') || s.contains('ndebele') || s.contains('language') || s.contains('kalanga') || s.contains('tonga') || s.contains('venda')) {
+      whereArgs.add('%indigenous%');
+      whereArgs.add('%shona%');
+      whereArgs.add('%ndebele%');
+      whereArgs.add('%kalanga%');
+      whereArgs.add('%tonga%');
+      whereArgs.add('%venda%');
+      whereArgs.add('%nambya%');
+      whereArgs.add('%chishona%');
+      whereArgs.add('%isindebele%');
+      whereArgs.add('%xichangana%');
+      whereArgs.add('%sesotho%');
+      return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ?)';
+    } else {
+      whereArgs.add(subject);
+      return 'subject = ?';
+    }
+  }
+
   Future<void> insertQuestions(List<Question> questions) async {
     final db = await dbProvider.database;
     await db.transaction((txn) async {
@@ -41,8 +87,8 @@ class QuestionRepository {
     List<dynamic> whereArgs = [grade];
 
     if (subject != null && subject.isNotEmpty) {
-      whereClause += ' AND subject = ?';
-      whereArgs.add(subject);
+      final subCond = _buildSubjectCondition(subject, whereArgs);
+      whereClause += ' AND $subCond';
     }
     if (topic != null && topic.isNotEmpty) {
       whereClause += ' AND topic = ?';
@@ -52,23 +98,22 @@ class QuestionRepository {
       whereClause += ' AND unit = ?';
       whereArgs.add(unit);
     }
-    // Indigenous language filtering:
-    //  - When subject == 'Indigenous Language': restrict to the chosen language unit only.
-    //  - When subject == null (all-subjects query such as daily challenge / revision):
-    //      keep every non-indigenous question AND include only the chosen language's
-    //      indigenous questions – exclude all other languages' questions.
+
     if (indigenousLanguage != null && indigenousLanguage.isNotEmpty) {
-      if (subject == 'Indigenous Language') {
-        // Topic-level practice: show only this language's questions.
-        whereClause += ' AND unit = ?';
+      final isIndigenousSub = subject != null &&
+          (subject.toLowerCase().contains('indigenous') ||
+              subject.toLowerCase().contains('language') ||
+              subject.toLowerCase().contains('shona') ||
+              subject.toLowerCase().contains('ndebele'));
+      if (isIndigenousSub) {
+        whereClause += ' AND (unit = ? OR LOWER(subject) LIKE ?)';
         whereArgs.add(indigenousLanguage);
+        whereArgs.add('%${indigenousLanguage.toLowerCase()}%');
       } else if (subject == null) {
-        // Cross-subject query: keep non-indigenous rows + chosen language indigenous rows.
-        whereClause += " AND (subject != 'Indigenous Language' OR unit = ?)";
+        whereClause += " AND (LOWER(subject) NOT LIKE '%indigenous%' OR unit = ? OR LOWER(subject) LIKE ?)";
         whereArgs.add(indigenousLanguage);
+        whereArgs.add('%${indigenousLanguage.toLowerCase()}%');
       }
-      // If subject is something other than Indigenous Language (e.g. 'Science'),
-      // don't add a unit filter at all – those subjects use unit for their own categories.
     }
 
     final List<Map<String, dynamic>> questionMaps = await db.query(
@@ -97,9 +142,12 @@ class QuestionRepository {
     required String subject,
   }) async {
     final db = await dbProvider.database;
+    List<dynamic> whereArgs = [grade];
+    final subCond = _buildSubjectCondition(subject, whereArgs);
+
     final List<Map<String, dynamic>> result = await db.rawQuery(
-      'SELECT DISTINCT topic FROM questions WHERE grade = ? AND subject = ? AND topic IS NOT NULL AND topic != "" ORDER BY topic ASC',
-      [grade, subject],
+      'SELECT DISTINCT topic FROM questions WHERE grade = ? AND $subCond AND topic IS NOT NULL AND topic != "" ORDER BY topic ASC',
+      whereArgs,
     );
     return result.map((r) => r['topic'] as String).toList();
   }
@@ -110,9 +158,13 @@ class QuestionRepository {
     required String topic,
   }) async {
     final db = await dbProvider.database;
+    List<dynamic> whereArgs = [grade];
+    final subCond = _buildSubjectCondition(subject, whereArgs);
+    whereArgs.add(topic);
+
     final List<Map<String, dynamic>> result = await db.rawQuery(
-      'SELECT DISTINCT unit FROM questions WHERE grade = ? AND subject = ? AND topic = ? AND unit IS NOT NULL AND unit != "" ORDER BY unit ASC',
-      [grade, subject, topic],
+      'SELECT DISTINCT unit FROM questions WHERE grade = ? AND $subCond AND topic = ? AND unit IS NOT NULL AND unit != "" ORDER BY unit ASC',
+      whereArgs,
     );
     return result.map((r) => r['unit'] as String).toList();
   }
@@ -132,22 +184,23 @@ class QuestionRepository {
     String? unit,
   }) async {
     final db = await dbProvider.database;
-    String sql = 'SELECT COUNT(*) FROM questions WHERE grade = ? AND subject = ? AND topic = ?';
-    List<dynamic> args = [grade, subject, topic];
+    List<dynamic> whereArgs = [grade];
+    final subCond = _buildSubjectCondition(subject, whereArgs);
+    whereArgs.add(topic);
+
+    String sql = 'SELECT COUNT(*) FROM questions WHERE grade = ? AND $subCond AND topic = ?';
     if (unit != null && unit.isNotEmpty) {
       sql += ' AND unit = ?';
-      args.add(unit);
+      whereArgs.add(unit);
     }
-    final count = Sqflite.firstIntValue(await db.rawQuery(sql, args));
+    final count = Sqflite.firstIntValue(await db.rawQuery(sql, whereArgs));
     return count ?? 0;
   }
 
   /// Deletes all questions (and their options) for [grade].
-  /// Called by ContentManager before a re-seed to avoid duplicate-key errors.
   Future<void> deleteAllQuestions({required int grade}) async {
     final db = await dbProvider.database;
     await db.transaction((txn) async {
-      // Fetch all question IDs for this grade so we can delete options too.
       final rows = await txn.rawQuery(
         'SELECT id FROM questions WHERE grade = ?',
         [grade],
@@ -160,4 +213,3 @@ class QuestionRepository {
     });
   }
 }
-

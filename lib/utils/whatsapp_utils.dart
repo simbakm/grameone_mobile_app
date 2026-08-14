@@ -13,13 +13,13 @@ class WhatsAppUtils {
   }) async {
     final encodedMessage = message != null && message.isNotEmpty
         ? Uri.encodeComponent(message)
-        : '';
+        : Uri.encodeComponent('Hello GrameOne Support, I need assistance.');
 
     // Primary: Direct WhatsApp deep-link scheme (works for both WhatsApp & WhatsApp Business)
-    final whatsappUri = Uri.parse('whatsapp://send?phone=$supportNumber${encodedMessage.isNotEmpty ? "&text=$encodedMessage" : ""}');
-    
+    final whatsappUri = Uri.parse('whatsapp://send?phone=$supportNumber&text=$encodedMessage');
+
     // Fallback: Web wa.me link
-    final webUri = Uri.parse('https://wa.me/$supportNumber${encodedMessage.isNotEmpty ? "?text=$encodedMessage" : ""}');
+    final webUri = Uri.parse('https://wa.me/$supportNumber?text=$encodedMessage');
 
     try {
       if (await canLaunchUrl(whatsappUri)) {
@@ -43,7 +43,6 @@ class WhatsAppUtils {
       }
     } catch (e) {
       debugPrint('Error launching WhatsApp: $e');
-      // Fallback try webUri
       try {
         await launchUrl(webUri, mode: LaunchMode.externalApplication);
       } catch (_) {
@@ -56,5 +55,45 @@ class WhatsAppUtils {
         }
       }
     }
+  }
+}
+
+/// Reusable crisp WhatsApp branded icon widget
+class WhatsAppIcon extends StatelessWidget {
+  final double size;
+  final Color backgroundColor;
+  final Color iconColor;
+
+  const WhatsAppIcon({
+    super.key,
+    this.size = 24,
+    this.backgroundColor = const Color(0xFF25D366),
+    this.iconColor = Colors.white,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: backgroundColor.withAlpha(70),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          Icons.chat,
+          color: iconColor,
+          size: size * 0.58,
+        ),
+      ),
+    );
   }
 }

@@ -135,8 +135,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Share this ID with your supplier to get an activation code.',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                    'An activation code can be obtained from your school or by contacting GrameOne support on WhatsApp.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                   ),
                 ],
               ),
@@ -235,7 +236,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
             const SizedBox(height: 20),
 
-            // ── WhatsApp pre-filled support button (Requirement 8) ────────
+            // ── WhatsApp support button ────────────────────────────────────
             Card(
               color: const Color(0xFFDCFCE7),
               shape: RoundedRectangleBorder(
@@ -243,20 +244,20 @@ class _ActivationScreenState extends State<ActivationScreen> {
                 side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
               ),
               child: ListTile(
-                leading: const Icon(Icons.chat, color: Color(0xFF16A34A), size: 28),
+                leading: const WhatsAppIcon(size: 28),
                 title: const Text(
-                  'Need an Activation Code?',
+                  'Need Help with Activation?',
                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight, fontSize: 14),
                 ),
                 subtitle: const Text(
-                  'Tap to chat with support on WhatsApp with your Device ID pre-filled.',
+                  'If you need help with activation, tap to contact GrameOne support.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                 ),
                 trailing: const Icon(Icons.open_in_new, color: Color(0xFF16A34A)),
                 onTap: () {
                   WhatsAppUtils.openSupportWhatsApp(
                     context: context,
-                    message: 'Hello GrameOne Support, I need assistance obtaining an activation code for Device ID: $deviceId.',
+                    message: 'Hello GrameOne Support, I need help with activating my application.',
                   );
                 },
               ),

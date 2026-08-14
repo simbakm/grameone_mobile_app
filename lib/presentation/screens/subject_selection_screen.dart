@@ -6,56 +6,60 @@ import '../../theme/app_theme.dart';
 import 'topics_screen.dart';
 
 /// Intermediate "Select a Subject" screen shown when the learner taps the
-/// Subjects card on the dashboard.  Each subject is presented as a large,
-/// tappable card – styled exactly like the main dashboard grid – with a
-/// distinct accent colour and icon.  Tapping a card navigates to
-/// [TopicsScreen] pre-filtered to that subject.
+/// Subjects card on the dashboard. Each subject is presented as a large,
+/// tappable card with official ZIMSEC subject names.
 class SubjectSelectionScreen extends StatelessWidget {
   const SubjectSelectionScreen({super.key});
 
-  // ── Subject metadata ────────────────────────────────────────────────────
+  // ── Official ZIMSEC Core Subjects ──────────────────────────────────────────
   static const List<_SubjectMeta> _subjects = [
     _SubjectMeta(
-      key: 'Science',
-      icon: Icons.science_outlined,
-      accent: AppColors.scienceTeal,
-      background: AppColors.bgScience,
-      subtitle: 'Nature, environment & experiments',
-    ),
-    _SubjectMeta(
       key: 'Mathematics',
+      displayName: 'Mathematics',
       icon: Icons.calculate_outlined,
       accent: AppColors.mathBlue,
       background: AppColors.bgMath,
-      subtitle: 'Numbers, shapes & measurement',
+      subtitle: 'Numbers, operations, shapes & measurement',
     ),
     _SubjectMeta(
-      key: 'English',
+      key: 'English Language',
+      displayName: 'English Language',
       icon: Icons.menu_book_outlined,
       accent: AppColors.englishPurple,
       background: AppColors.bgEnglish,
       subtitle: 'Grammar, reading & vocabulary',
     ),
     _SubjectMeta(
-      key: 'Agriculture',
-      icon: Icons.grass_outlined,
-      accent: AppColors.emeraldGreen,
-      background: AppColors.lightGreen,
-      subtitle: 'Farming, crops & soil science',
-    ),
-    _SubjectMeta(
-      key: 'Social Science',
-      icon: Icons.public_outlined,
-      accent: AppColors.socialRose,
-      background: AppColors.bgSocial,
-      subtitle: 'Heritage, culture & government',
-    ),
-    _SubjectMeta(
       key: 'Indigenous Language',
+      displayName: 'Indigenous Language',
       icon: Icons.record_voice_over_outlined,
       accent: AppColors.royalGold,
       background: AppColors.lightGold,
       subtitle: null, // resolved dynamically from settings
+    ),
+    _SubjectMeta(
+      key: 'Agriculture, Science and Technology and ICT',
+      displayName: 'Agriculture, Science and Tech & ICT',
+      icon: Icons.science_outlined,
+      accent: AppColors.scienceTeal,
+      background: AppColors.bgScience,
+      subtitle: 'Farming, nature, computing & technology',
+    ),
+    _SubjectMeta(
+      key: 'Social Sciences',
+      displayName: 'Social Sciences',
+      icon: Icons.public_outlined,
+      accent: AppColors.socialRose,
+      background: AppColors.bgSocial,
+      subtitle: 'Heritage, culture, family & community',
+    ),
+    _SubjectMeta(
+      key: 'Physical Education and Arts',
+      displayName: 'Physical Education & Arts',
+      icon: Icons.sports_soccer_outlined,
+      accent: AppColors.emeraldGreen,
+      background: AppColors.lightGreen,
+      subtitle: 'Fitness, sports, music & visual arts',
     ),
   ];
 
@@ -75,10 +79,10 @@ class SubjectSelectionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header hint
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Choose a subject to browse its topics',
+                  'Choose a ZIMSEC subject to browse topics & practice',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondaryLight,
@@ -95,33 +99,87 @@ class SubjectSelectionScreen extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 0.9,
+                  childAspectRatio: 0.82,
                 ),
                 itemBuilder: (context, index) {
                   final meta = _subjects[index];
                   final isIndigenous = meta.key == 'Indigenous Language';
-                  final subtitle = isIndigenous
-                      ? selectedLang // e.g. "Shona"
-                      : meta.subtitle!;
-                  final label = isIndigenous
-                      ? 'Indigenous\nLanguage'
-                      : meta.key;
+                  final titleText = isIndigenous
+                      ? 'Indigenous Language ($selectedLang)'
+                      : meta.displayName;
+                  final subtitleText = isIndigenous
+                      ? 'Shona, Ndebele & local languages'
+                      : (meta.subtitle ?? '');
 
-                  return _SubjectCard(
-                    meta: meta,
-                    label: label,
-                    subtitle: subtitle,
-                    isIndigenous: isIndigenous,
-                    selectedLang: selectedLang,
-                    onTap: () {
-                      provider.setActiveSubject(meta.key);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              TopicsScreen(initialSubject: meta.key),
+                  return Card(
+                    clipBehavior: Clip.antiAlias,
+                    elevation: 3,
+                    shadowColor: Colors.black.withAlpha(20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: meta.accent.withAlpha(100),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        provider.setActiveSubject(meta.key);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TopicsScreen(initialSubject: meta.key),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: meta.background,
                         ),
-                      );
-                    },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Icon circle
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: meta.accent.withAlpha(40),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(meta.icon, color: meta.accent, size: 24),
+                            ),
+                            const Spacer(),
+
+                            // Subject title
+                            Text(
+                              titleText,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimaryLight,
+                                height: 1.2,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+
+                            // Subtitle
+                            Text(
+                              subtitleText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondaryLight,
+                                height: 1.2,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -133,109 +191,20 @@ class SubjectSelectionScreen extends StatelessWidget {
   }
 }
 
-// ── Internal card widget ─────────────────────────────────────────────────────
-
-class _SubjectCard extends StatelessWidget {
-  const _SubjectCard({
-    required this.meta,
-    required this.label,
-    required this.subtitle,
-    required this.isIndigenous,
-    required this.selectedLang,
-    required this.onTap,
-  });
-
-  final _SubjectMeta meta;
-  final String label;
-  final String subtitle;
-  final bool isIndigenous;
-  final String selectedLang;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      shadowColor: meta.accent.withAlpha(50),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: meta.accent.withAlpha(60), width: 1.2),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        splashColor: meta.accent.withAlpha(30),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Accent icon bubble
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: meta.background,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: meta.accent.withAlpha(80)),
-                ),
-                child: Icon(meta.icon, size: 22, color: meta.accent),
-              ),
-              const SizedBox(height: 6),
-
-              // Subject name
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimaryLight,
-                  height: 1.1,
-                ),
-              ),
-
-              const SizedBox(height: 2),
-
-              // Subtitle line
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: isIndigenous ? 11 : 10,
-                  fontWeight: isIndigenous ? FontWeight.bold : FontWeight.normal,
-                  color: isIndigenous ? meta.accent : AppColors.textSecondaryLight,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Data class ───────────────────────────────────────────────────────────────
-
 class _SubjectMeta {
-  const _SubjectMeta({
-    required this.key,
-    required this.icon,
-    required this.accent,
-    required this.background,
-    required this.subtitle,
-  });
-
   final String key;
+  final String displayName;
   final IconData icon;
   final Color accent;
   final Color background;
   final String? subtitle;
+
+  const _SubjectMeta({
+    required this.key,
+    required this.displayName,
+    required this.icon,
+    required this.accent,
+    required this.background,
+    this.subtitle,
+  });
 }

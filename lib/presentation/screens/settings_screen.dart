@@ -442,7 +442,7 @@ class SettingsScreen extends StatelessWidget {
                 side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
               ),
               child: ListTile(
-                leading: const Icon(Icons.chat, color: Color(0xFF16A34A), size: 28),
+                leading: const WhatsAppIcon(size: 28),
                 title: const Text(
                   'Need Assistance? Contact Support',
                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimaryLight),

@@ -47,25 +47,25 @@ class DailyChallengeEngine {
     List<Question> result = [];
     Set<String> addedIds = {};
 
-    // 1. Add 60% weak concepts (3 questions)
+    // 1. Add weak concepts (up to 9 questions)
     for (var q in weakQuestions) {
-      if (result.length >= 3) break;
+      if (result.length >= 9) break;
       if (addedIds.add(q.id)) {
         result.add(q);
       }
     }
 
-    // 2. Add 30% current subject (up to 2 questions)
+    // 2. Add current subject (up to 4 questions)
     for (var q in subjectQuestions) {
-      if (result.length >= 4) break;
+      if (result.length >= 13) break;
       if (addedIds.add(q.id)) {
         result.add(q);
       }
     }
 
-    // 3. Add 10% random revision to make 5 total
+    // 3. Fill remaining random revision to make 15 total questions
     for (var q in randomQuestions) {
-      if (result.length >= 5) break;
+      if (result.length >= 15) break;
       if (addedIds.add(q.id)) {
         result.add(q);
       }

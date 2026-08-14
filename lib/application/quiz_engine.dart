@@ -41,7 +41,7 @@ class QuizEngine {
         targetCount = 40; // End-of-topic revision test = 40 questions
         break;
       case TestType.dailyChallenge:
-        targetCount = 5;
+        targetCount = 15;
         break;
       case TestType.practice:
         targetCount = 20; // Max 20 per unit practice session
