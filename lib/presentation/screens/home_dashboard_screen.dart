@@ -125,12 +125,20 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Widget _buildDismissableExpiryAlert(BuildContext context, AppProvider provider, LicenseInfo? license) {
-    if (license == null || !license.isActivated || license.expiryDate == null) {
+    // Use per-learner expiry if available, else fall back to global license
+    final activeLearner = provider.activeLearner;
+    final DateTime? effectiveExpiry = (activeLearner != null && activeLearner.expiryDate != null)
+        ? activeLearner.expiryDate
+        : license?.expiryDate;
+
+    if (effectiveExpiry == null) return Container();
+    // If learner has no activation at all, don't show banner
+    if (activeLearner != null && !activeLearner.isActivated && (license == null || !license.isActivated)) {
       return Container();
     }
 
     final now = DateTime.now();
-    final remaining = license.expiryDate!.difference(now);
+    final remaining = effectiveExpiry.difference(now);
     final days = remaining.inDays;
     final hours = remaining.inHours;
 
@@ -395,10 +403,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
     final license = provider.licenseInfo;
-    final bool isExpired = license != null &&
-        license.isActivated &&
-        license.expiryDate != null &&
-        license.expiryDate!.isBefore(DateTime.now());
+    // Per-learner expiry check — only lock out the ACTIVE learner, not all
+    final bool isExpired = provider.isActiveLearnerExpired;
 
     if (isExpired) {
       return _buildExpiredLicenseLockView(context, provider);

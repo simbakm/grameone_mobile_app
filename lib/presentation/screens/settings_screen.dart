@@ -17,8 +17,6 @@ class SettingsScreen extends StatelessWidget {
   static const List<String> _alphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
   void _showAddLearnerDialog(BuildContext context, AppProvider provider) {
-    int selectedGrade = 7;
-    String selectedLang = 'Shona';
     final codeController = TextEditingController();
     String? dialogError;
     bool isSaving = false;
@@ -26,6 +24,8 @@ class SettingsScreen extends StatelessWidget {
     final existingCount = provider.learnerProfiles.length;
     final letter = existingCount < _alphabet.length ? _alphabet[existingCount] : '${existingCount + 1}';
     final defaultName = 'Learner $letter';
+
+    final navigatorContext = context; // Capture before async gap
 
     showDialog(
       context: context,
@@ -54,36 +54,6 @@ class SettingsScreen extends StatelessWidget {
                   'We do not collect any personal data or names.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Text('Grade: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-                    DropdownButton<int>(
-                      value: selectedGrade,
-                      items: [1, 2, 3, 4, 5, 6, 7].map((g) => DropdownMenuItem(value: g, child: Text('Grade $g'))).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => selectedGrade = v);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('Language: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-                    DropdownButton<String>(
-                      value: selectedLang,
-                      items: ['Shona', 'Ndebele'].map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => selectedLang = v);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
                 // Activation Code required for all new learner profiles
                 const Text(
                   'Learner Activation Code *',
@@ -159,7 +129,7 @@ class SettingsScreen extends StatelessWidget {
                         });
 
                         final devId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
-                        final result = await ApiService.validateLicense(code, devId, gradeId: selectedGrade);
+                        final result = await ApiService.validateLicense(code, devId, gradeId: 0);
 
                         if (result['valid'] != true) {
                           setState(() {
@@ -178,8 +148,8 @@ class SettingsScreen extends StatelessWidget {
                           id: 'learner_${DateTime.now().millisecondsSinceEpoch}',
                           name: defaultName,
                           avatar: '🧒',
-                          grade: selectedGrade,
-                          indigenousLanguage: selectedLang,
+                          grade: 7, // Default, user will select on GradeSelectionScreen
+                          indigenousLanguage: 'Shona', // Default, user will select after download
                           createdAt: DateTime.now(),
                           activationCode: code,
                           expiryDate: expiry,
@@ -188,7 +158,12 @@ class SettingsScreen extends StatelessWidget {
                         );
 
                         await provider.createOrUpdateLearnerProfile(newProfile);
-                        if (context.mounted) Navigator.of(ctx).pop();
+                        if (!navigatorContext.mounted) return;
+                        // Close dialog then navigate to grade selection for the new learner
+                        Navigator.of(ctx).pop();
+                        Navigator.of(navigatorContext).push(
+                          MaterialPageRoute(builder: (_) => const GradeSelectionScreen()),
+                        );
                       },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.emeraldGreen),
                 child: isSaving
