@@ -32,6 +32,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
+            scrollable: true,
             title: Row(
               children: const [
                 Icon(Icons.person_add_alt_1_outlined, color: AppColors.emeraldGreen),
@@ -39,10 +40,11 @@ class SettingsScreen extends StatelessWidget {
                 Text('Add Learner Profile'),
               ],
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Text(
                   'Profile Title: $defaultName',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimaryLight),
@@ -134,7 +136,8 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ],
             ),
-            actions: [
+          ),
+          actions: [
               TextButton(
                 onPressed: isSaving ? null : () => Navigator.of(ctx).pop(),
                 child: const Text('CANCEL'),
