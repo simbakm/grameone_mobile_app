@@ -41,9 +41,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
     Map<String, dynamic> result;
     if (codes.length > 1) {
-      result = await ApiService.validateMultiLicenses(codes, deviceId);
+      result = await ApiService.validateMultiLicenses(codes, deviceId, gradeId: provider.currentGrade);
     } else {
-      result = await ApiService.validateLicense(codes.first, deviceId);
+      result = await ApiService.validateLicense(codes.first, deviceId, gradeId: provider.currentGrade);
     }
 
     setState(() => _isLoading = false);

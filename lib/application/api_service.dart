@@ -7,19 +7,23 @@ class ApiService {
 
   // ── License Validation ──────────────────────────────────────────────────
   /// Returns a map with keys: valid (bool), message (String), expiryDate (String?),
-  /// gradeIds (List of int) on success.
-  static Future<Map<String, dynamic>> validateLicense(String code, String deviceId) async {
+  static Future<Map<String, dynamic>> validateLicense(String code, String deviceId, {int? gradeId}) async {
     final cleanCode = code.trim().toUpperCase();
     final cleanDevice = deviceId.trim();
 
-    final uri = Uri.parse('$_baseUrl/api/licenses/validate')
-        .replace(queryParameters: {'activationCode': cleanCode, 'deviceId': cleanDevice});
+    final Map<String, dynamic> payload = {
+      'activationCode': cleanCode,
+      'deviceId': cleanDevice,
+    };
+    if (gradeId != null) payload['gradeId'] = gradeId;
+
+    final uri = Uri.parse('$_baseUrl/api/licenses/validate');
 
     try {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'activationCode': cleanCode, 'deviceId': cleanDevice}),
+        body: jsonEncode(payload),
       ).timeout(const Duration(seconds: 20));
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -48,9 +52,15 @@ class ApiService {
   }
 
   /// Validates multiple activation codes simultaneously via POST /api/licenses/validate-multi
-  static Future<Map<String, dynamic>> validateMultiLicenses(List<String> codes, String deviceId) async {
+  static Future<Map<String, dynamic>> validateMultiLicenses(List<String> codes, String deviceId, {int? gradeId}) async {
     final cleanCodes = codes.map((c) => c.trim().toUpperCase()).where((c) => c.isNotEmpty).toList();
     final cleanDevice = deviceId.trim();
+
+    final Map<String, dynamic> payload = {
+      'activationCodes': cleanCodes,
+      'deviceId': cleanDevice,
+    };
+    if (gradeId != null) payload['gradeId'] = gradeId;
 
     final uri = Uri.parse('$_baseUrl/api/licenses/validate-multi');
 
@@ -58,11 +68,8 @@ class ApiService {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'activationCodes': cleanCodes,
-          'deviceId': cleanDevice,
-        }),
-      ).timeout(const Duration(seconds: 25));
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 20));
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
 
