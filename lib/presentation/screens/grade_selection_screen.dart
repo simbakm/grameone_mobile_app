@@ -70,9 +70,9 @@ class GradeSelectionScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Welcome Learner! 👋',
-                style: TextStyle(
+              Text(
+                'Welcome ${provider.activeLearner?.name ?? 'Learner'}! 👋',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.deepMaroon,
@@ -81,8 +81,8 @@ class GradeSelectionScreen extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 isLocked
-                    ? 'Your application is locked to Grade $currentGrade. You can change your Indigenous Language in Settings anytime.'
-                    : 'Choose your grade level. We\'ll download the latest question pack automatically.',
+                    ? '${provider.activeLearner?.name ?? 'This profile'} is locked to Grade $currentGrade. You can change your Indigenous Language in Settings anytime.'
+                    : 'Choose grade for ${provider.activeLearner?.name ?? 'this profile'}. We\'ll download the latest question pack automatically.',
                 style: const TextStyle(fontSize: 14, color: AppColors.textSecondaryLight, height: 1.4),
               ),
               const SizedBox(height: 24),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../application/api_service.dart';
 import '../../application/app_provider.dart';
+import '../../data/models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/whatsapp_utils.dart';
 import 'grade_selection_screen.dart';
@@ -100,20 +101,35 @@ class _ActivationScreenState extends State<ActivationScreen> {
                 children: [
                   const Icon(Icons.shield_outlined, size: 52, color: AppColors.emeraldGreen),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Hardware Bound License',
-                    style: TextStyle(
+                  Text(
+                    'Activating for: ${provider.activeLearner?.name ?? 'Learner'}',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.deepMaroon,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Your device ID is permanently tied to this device. It will remain the same even after reinstalling the app.',
+                  Text(
+                    'License will be linked to ${provider.activeLearner?.name ?? 'this learner'} (Grade ${provider.currentGrade}).',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, height: 1.4),
                   ),
+                  if (provider.learnerProfiles.length > 1) ...[
+                    const SizedBox(height: 10),
+                    PopupMenuButton<LearnerProfile>(
+                      onSelected: (profile) => provider.switchLearnerProfile(profile),
+                      itemBuilder: (context) => provider.learnerProfiles.map((p) => PopupMenuItem(
+                        value: p,
+                        child: Text('${p.avatar} ${p.name} (Grade ${p.grade})'),
+                      )).toList(),
+                      child: Chip(
+                        avatar: Text(provider.activeLearner?.avatar ?? '🧒'),
+                        label: Text('Change Learner: ${provider.activeLearner?.name} ▾'),
+                        backgroundColor: AppColors.royalGold.withAlpha(40),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

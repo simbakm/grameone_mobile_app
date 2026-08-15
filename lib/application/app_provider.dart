@@ -81,7 +81,30 @@ class AppProvider extends ChangeNotifier {
   // Active Grade helper (from profile or global setting)
   int get currentGrade => _activeLearner?.grade ?? _settings?.selectedGrade ?? 7;
   String get currentIndigenousLang => _activeLearner?.indigenousLanguage ?? _settings?.selectedIndigenousLang ?? 'Shona';
-  bool get isGradeLocked => _settings?.isGradeLocked ?? false;
+  bool get isGradeLocked => _activeLearner?.isGradeLocked ?? _settings?.isGradeLocked ?? false;
+
+  bool get isActiveLearnerExpired {
+    if (_activeLearner != null && _activeLearner!.isActivated && _activeLearner!.expiryDate != null) {
+      return DateTime.now().isAfter(_activeLearner!.expiryDate!);
+    }
+    if (_licenseInfo != null && _licenseInfo!.isActivated && _licenseInfo!.expiryDate != null) {
+      return DateTime.now().isAfter(_licenseInfo!.expiryDate!);
+    }
+    return false;
+  }
+
+  LearnerProfile? get validAlternativeLearner {
+    final now = DateTime.now();
+    for (final p in _learnerProfiles) {
+      if (p.id != _activeLearner?.id) {
+        final bool isExpired = p.expiryDate != null && now.isAfter(p.expiryDate!);
+        if (!isExpired) {
+          return p;
+        }
+      }
+    }
+    return null;
+  }
 
   int? _dismissedExpiryThresholdDay;
   int? get dismissedExpiryThresholdDay => _dismissedExpiryThresholdDay;
@@ -96,14 +119,14 @@ class AppProvider extends ChangeNotifier {
     _licenseInfo = await _licenseManager.initLicense();
     _settings = await _settingsRepository.getSettings();
 
+    // Load learner profiles
+    await refreshLearnerProfiles();
+
     // Auto-lock grade if question content is already present on device for current grade
     final questionCount = await _questionRepository.getQuestionCount(grade: currentGrade);
     if (questionCount > 0 && !isGradeLocked) {
       await lockGrade();
     }
-
-    // Load learner profiles
-    await refreshLearnerProfiles();
 
     await refreshAnalytics();
     notifyListeners();
@@ -134,6 +157,7 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> switchLearnerProfile(LearnerProfile profile) async {
     _activeLearner = profile;
+    _dismissedExpiryThresholdDay = null;
     await _learnerRepository.setActiveLearnerProfileId(profile.id);
     await setGrade(profile.grade);
     await setIndigenousLanguage(profile.indigenousLanguage);
@@ -168,6 +192,17 @@ class AppProvider extends ChangeNotifier {
     final success = await _licenseManager.activateDevice(code);
     if (success) {
       _licenseInfo = await _licenseManager.initLicense();
+      if (_activeLearner != null) {
+        final updatedProfile = _activeLearner!.copyWith(
+          activationCode: code,
+          expiryDate: _licenseInfo?.expiryDate,
+          isActivated: true,
+          isGradeLocked: false,
+        );
+        await _learnerRepository.updateLearnerProfile(updatedProfile);
+        _activeLearner = updatedProfile;
+        await refreshLearnerProfiles();
+      }
       notifyListeners();
     }
     return success;
@@ -197,17 +232,39 @@ class AppProvider extends ChangeNotifier {
     );
     await _licenseManager.licenseRepository.saveLicenseInfo(updatedLicense);
     _licenseInfo = updatedLicense;
+
+    if (_activeLearner != null) {
+      final updatedProfile = _activeLearner!.copyWith(
+        activationCode: code,
+        expiryDate: expiry,
+        isActivated: true,
+        isGradeLocked: false, // allow grade selection for this learner!
+      );
+      await _learnerRepository.updateLearnerProfile(updatedProfile);
+      _activeLearner = updatedProfile;
+      await refreshLearnerProfiles();
+    }
     notifyListeners();
   }
 
   Future<void> lockGrade() async {
     await _settingsRepository.updateGradeLock(true);
+    if (_activeLearner != null) {
+      final updated = _activeLearner!.copyWith(isGradeLocked: true);
+      await _learnerRepository.updateLearnerProfile(updated);
+      _activeLearner = updated;
+    }
     _settings = await _settingsRepository.getSettings();
     notifyListeners();
   }
 
   Future<void> unlockGrade() async {
     await _settingsRepository.updateGradeLock(false);
+    if (_activeLearner != null) {
+      final updated = _activeLearner!.copyWith(isGradeLocked: false);
+      await _learnerRepository.updateLearnerProfile(updated);
+      _activeLearner = updated;
+    }
     _settings = await _settingsRepository.getSettings();
     notifyListeners();
   }

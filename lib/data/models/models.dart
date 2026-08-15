@@ -174,10 +174,14 @@ class QuizAttempt {
 class LearnerProfile {
   final String id;
   final String name;
-  final String avatar; // emoji avatar e.g. '🧒'
+  final String avatar;
   final int grade;
   final String indigenousLanguage;
   final DateTime createdAt;
+  final String? activationCode;
+  final DateTime? expiryDate;
+  final bool isActivated;
+  final bool isGradeLocked;
 
   LearnerProfile({
     required this.id,
@@ -186,7 +190,17 @@ class LearnerProfile {
     required this.grade,
     required this.indigenousLanguage,
     required this.createdAt,
+    this.activationCode,
+    this.expiryDate,
+    this.isActivated = false,
+    this.isGradeLocked = false,
   });
+
+  bool get isExpired {
+    if (!isActivated) return false;
+    if (expiryDate == null) return false;
+    return DateTime.now().isAfter(expiryDate!);
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -196,6 +210,10 @@ class LearnerProfile {
       'grade': grade,
       'indigenous_language': indigenousLanguage,
       'created_at': createdAt.toIso8601String(),
+      'activation_code': activationCode,
+      'expiry_date': expiryDate?.toIso8601String(),
+      'is_activated': isActivated ? 1 : 0,
+      'is_grade_locked': isGradeLocked ? 1 : 0,
     };
   }
 
@@ -207,6 +225,10 @@ class LearnerProfile {
       grade: map['grade'] as int,
       indigenousLanguage: map['indigenous_language'] as String,
       createdAt: DateTime.parse(map['created_at'] as String),
+      activationCode: map['activation_code'] as String?,
+      expiryDate: map['expiry_date'] != null ? DateTime.tryParse(map['expiry_date'] as String) : null,
+      isActivated: (map['is_activated'] as int? ?? 0) == 1,
+      isGradeLocked: (map['is_grade_locked'] as int? ?? 0) == 1,
     );
   }
 
@@ -215,6 +237,10 @@ class LearnerProfile {
     String? avatar,
     int? grade,
     String? indigenousLanguage,
+    String? activationCode,
+    DateTime? expiryDate,
+    bool? isActivated,
+    bool? isGradeLocked,
   }) {
     return LearnerProfile(
       id: id,
@@ -223,6 +249,10 @@ class LearnerProfile {
       grade: grade ?? this.grade,
       indigenousLanguage: indigenousLanguage ?? this.indigenousLanguage,
       createdAt: createdAt,
+      activationCode: activationCode ?? this.activationCode,
+      expiryDate: expiryDate ?? this.expiryDate,
+      isActivated: isActivated ?? this.isActivated,
+      isGradeLocked: isGradeLocked ?? this.isGradeLocked,
     );
   }
 }

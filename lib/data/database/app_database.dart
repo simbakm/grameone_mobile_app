@@ -31,7 +31,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 3,          // ← bumped from 2 to 3
+      version: 4,          // ← bumped to version 4 for per-learner licensing
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -94,7 +94,7 @@ class AppDatabase {
       )
     ''');
 
-    // License Info Table
+    // License Info Table (Global fallback)
     await db.execute('''
       CREATE TABLE license_info (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -130,7 +130,7 @@ class AppDatabase {
       )
     ''');
 
-    // ── v2: Learner Profiles Table ─────────────────────────────────────
+    // ── v4: Learner Profiles Table with Per-Learner License & Lock ─────
     await db.execute('''
       CREATE TABLE learner_profiles (
         id TEXT PRIMARY KEY,
@@ -138,11 +138,15 @@ class AppDatabase {
         avatar TEXT NOT NULL DEFAULT '🧒',
         grade INTEGER NOT NULL DEFAULT 7,
         indigenous_language TEXT NOT NULL DEFAULT 'Shona',
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        activation_code TEXT,
+        expiry_date TEXT,
+        is_activated INTEGER NOT NULL DEFAULT 0,
+        is_grade_locked INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
-    // ── v2: Active Profile Preference ─────────────────────────────────
+    // ── Active Profile Preference ─────────────────────────────────
     await db.execute('''
       CREATE TABLE active_profile (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -160,8 +164,8 @@ class AppDatabase {
     });
   }
 
-  /// Migration from version 1 → 3: add learner_profiles, active_profile,
-  /// learner_profile_id column to quiz_attempts, and is_grade_locked to user_settings.
+  /// Migration from version 1 → 4: add learner_profiles, active_profile,
+  /// per-learner license and grade lock columns.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE quiz_attempts ADD COLUMN learner_profile_id TEXT');
@@ -187,6 +191,16 @@ class AppDatabase {
         await db.execute('ALTER TABLE user_settings ADD COLUMN is_grade_locked INTEGER NOT NULL DEFAULT 0');
       } catch (e) {
         debugPrint('Column is_grade_locked may already exist: $e');
+      }
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE learner_profiles ADD COLUMN activation_code TEXT');
+        await db.execute('ALTER TABLE learner_profiles ADD COLUMN expiry_date TEXT');
+        await db.execute('ALTER TABLE learner_profiles ADD COLUMN is_activated INTEGER NOT NULL DEFAULT 0');
+        await db.execute('ALTER TABLE learner_profiles ADD COLUMN is_grade_locked INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        debugPrint('Per-learner license columns may already exist: $e');
       }
     }
   }
