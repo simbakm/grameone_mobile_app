@@ -334,6 +334,7 @@ class AppProvider extends ChangeNotifier {
         subject: subject,
         topic: topic,
         unit: unit,
+        indigenousLanguage: indigenousLang,
       );
     } else {
       _totalUnitQuestionsAvailable = _currentQuizQuestions.length;

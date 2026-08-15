@@ -64,7 +64,7 @@ class SubjectSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
-    final selectedLang = provider.settings?.selectedIndigenousLang ?? 'Shona';
+    final selectedLang = provider.currentIndigenousLang;
 
     return Scaffold(
       appBar: AppBar(

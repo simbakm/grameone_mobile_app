@@ -9,21 +9,28 @@ class ContentManager {
       : questionRepository = questionRepository ?? QuestionRepository();
 
   Future<void> seedDefaultQuestionsIfEmpty() async {
-    final count = await questionRepository.getQuestionCount(grade: 7);
-    if (count > 0) return; // Keep existing questions, do not overwrite
-
     final prefs = await SharedPreferences.getInstance();
     final hasDownloadedVersion = prefs.containsKey('content_version_7');
     if (hasDownloadedVersion) return; // Content package downloaded, do not seed mock data
 
-    List<Question> seedQuestions = [];
+    // Ensure default Indigenous Language questions (Shona, Ndebele, Tonga) are seeded if missing
+    final indigenousCount = await questionRepository.getQuestionCountForSubject(
+      grade: 7,
+      subject: 'Indigenous Language',
+    );
+    if (indigenousCount == 0) {
+      await questionRepository.insertQuestions(_generateIndigenousQuestions());
+    }
 
+    final count = await questionRepository.getQuestionCount(grade: 7);
+    if (count > 0) return; // Keep existing questions, do not overwrite
+
+    List<Question> seedQuestions = [];
     seedQuestions.addAll(_generateScienceQuestions());
     seedQuestions.addAll(_generateMathQuestions());
     seedQuestions.addAll(_generateEnglishQuestions());
     seedQuestions.addAll(_generateAgricultureQuestions());
     seedQuestions.addAll(_generateSocialScienceQuestions());
-    seedQuestions.addAll(_generateIndigenousQuestions());
 
     await questionRepository.insertQuestions(seedQuestions);
   }

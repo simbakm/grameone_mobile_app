@@ -174,15 +174,30 @@ class QuestionRepository {
     return count ?? 0;
   }
 
+  Future<int> getQuestionCountForSubject({
+    required int grade,
+    required String subject,
+    String? indigenousLanguage,
+  }) async {
+    final db = await dbProvider.database;
+    List<dynamic> whereArgs = [grade];
+    final subCond = _buildSubjectCondition(subject, whereArgs, indigenousLanguage: indigenousLanguage);
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM questions WHERE grade = ? AND $subCond', whereArgs),
+    );
+    return count ?? 0;
+  }
+
   Future<int> getQuestionCountForUnit({
     required int grade,
     required String subject,
     required String topic,
     String? unit,
+    String? indigenousLanguage,
   }) async {
     final db = await dbProvider.database;
     List<dynamic> whereArgs = [grade];
-    final subCond = _buildSubjectCondition(subject, whereArgs);
+    final subCond = _buildSubjectCondition(subject, whereArgs, indigenousLanguage: indigenousLanguage);
     whereArgs.add(topic);
 
     String sql = 'SELECT COUNT(*) FROM questions WHERE grade = ? AND $subCond AND topic = ?';

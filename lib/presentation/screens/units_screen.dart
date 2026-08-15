@@ -38,11 +38,13 @@ class _UnitsScreenState extends State<UnitsScreen> {
     final grade = provider.currentGrade;
     final learnerId = provider.activeLearner?.id;
 
+    final selectedLang = provider.currentIndigenousLang;
     try {
       final units = await provider.questionRepository.getUnitsForTopic(
         grade: grade,
         subject: widget.subject,
         topic: widget.topic,
+        indigenousLanguage: widget.subject.toLowerCase().contains('indigenous') ? selectedLang : null,
       );
 
       final progress = await provider.analyticsRepository.getUnitProgressMap(
