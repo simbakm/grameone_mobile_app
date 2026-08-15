@@ -102,7 +102,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   const Icon(Icons.shield_outlined, size: 52, color: AppColors.emeraldGreen),
                   const SizedBox(height: 12),
                   Text(
-                    'Activating for: ${provider.activeLearner?.name ?? 'Learner'}',
+                    provider.learnerProfiles.length > 1
+                        ? 'Activating for: ${provider.activeLearner?.name ?? 'Learner'}'
+                        : 'Hardware Bound License',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -111,9 +113,11 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'License will be linked to ${provider.activeLearner?.name ?? 'this learner'} (Grade ${provider.currentGrade}).',
+                    provider.learnerProfiles.length > 1
+                        ? 'Select which child profile you are renewing this license for:'
+                        : 'Your device ID is permanently tied to this device. It will remain the same even after reinstalling the app.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, height: 1.4),
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, height: 1.4),
                   ),
                   if (provider.learnerProfiles.length > 1) ...[
                     const SizedBox(height: 10),
@@ -125,7 +129,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                       )).toList(),
                       child: Chip(
                         avatar: Text(provider.activeLearner?.avatar ?? '🧒'),
-                        label: Text('Change Learner: ${provider.activeLearner?.name} ▾'),
+                        label: Text('Selected Profile: ${provider.activeLearner?.name} ▾'),
                         backgroundColor: AppColors.royalGold.withAlpha(40),
                       ),
                     ),
