@@ -47,55 +47,56 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.deepMaroon,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.royalGold,
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: AppColors.shadowLight,
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
+      backgroundColor: const Color(0xFF034A2C),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/splash_screen.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: AppColors.deepMaroon,
+                child: const Center(
+                  child: Text(
+                    'GrameOne',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.school,
-                size: 72,
-                color: AppColors.surfaceLight,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'GrameOne',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: AppColors.surfaceLight,
-                letterSpacing: 1.2,
-              ),
+          ),
+          Positioned(
+            left: 48,
+            right: 48,
+            bottom: 36,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: const LinearProgressIndicator(
+                    minHeight: 6,
+                    backgroundColor: Colors.black26,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.royalGold),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Loading GrameOne...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                    shadows: [
+                      Shadow(blurRadius: 4, color: Colors.black54, offset: Offset(0, 1)),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Homework Pack & Exam Prep System',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.lightGold,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.royalGold),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
