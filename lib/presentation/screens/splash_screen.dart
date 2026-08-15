@@ -14,11 +14,27 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _scaleAnim;
+
   @override
   void initState() {
     super.initState();
+    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
+    _scaleAnim = Tween<double>(begin: 0.82, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
+    );
+    _animController.forward();
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -47,56 +63,90 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF034A2C),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/splash_screen.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: AppColors.deepMaroon,
-                child: const Center(
-                  child: Text(
-                    'GrameOne',
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+      backgroundColor: AppColors.deepMaroon,
+      body: Center(
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: ScaleTransition(
+            scale: _scaleAnim,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Small centered app icon
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/images/app_icon.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.school,
+                      size: 80,
+                      color: AppColors.royalGold,
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 48,
-            right: 48,
-            bottom: 36,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
-                    minHeight: 6,
-                    backgroundColor: Colors.black26,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.royalGold),
+                const SizedBox(height: 28),
+
+                // App name
+                const Text(
+                  'GrameOne',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 1.4,
                   ),
                 ),
                 const SizedBox(height: 8),
+
+                // Made in Zimbabwe badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.royalGold.withAlpha(26),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.royalGold.withAlpha(100), width: 1),
+                  ),
+                  child: const Text(
+                    '🇿🇼  Made in Zimbabwe',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.royalGold,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Curriculum line
                 const Text(
-                  'Loading GrameOne...',
+                  'Grade 7 ZIMSEC Curriculum',
                   style: TextStyle(
-                    color: Colors.white,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
-                    shadows: [
-                      Shadow(blurRadius: 4, color: Colors.black54, offset: Offset(0, 1)),
-                    ],
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+
+                const SizedBox(height: 52),
+
+                // Loading indicator
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.royalGold),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
