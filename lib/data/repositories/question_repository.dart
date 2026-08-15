@@ -35,7 +35,7 @@ class QuestionRepository {
       whereArgs.add('%ict%');
       whereArgs.add('%tech%');
       return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(subject) LIKE ?)';
-    } else if (s.contains('indigenous') || s.contains('shona') || s.contains('ndebele') || s.contains('language') || s.contains('kalanga') || s.contains('tonga') || s.contains('venda')) {
+    } else if (s.contains('indigenous') || s.contains('shona') || s.contains('ndebele') || s.contains('language') || s.contains('tonga') || s.contains('kalanga') || s.contains('venda') || s.contains('tshivenda') || s.contains('nambya') || s.contains('sesotho') || s.contains('xichangana') || s.contains('chishona') || s.contains('isindebele')) {
       if (indigenousLanguage != null && indigenousLanguage.isNotEmpty) {
         final lang = indigenousLanguage.toLowerCase().trim();
         if (lang.contains('ndebele') || lang.contains('isindebele')) {
@@ -49,6 +49,7 @@ class QuestionRepository {
           whereArgs.add('Shona');
           return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR unit = ?)';
         } else {
+          // Dynamic handler for ALL other indigenous languages: Tonga, Kalanga, Tshivenda, Nambya, Xichangana, Sesotho, etc.
           whereArgs.add('%$lang%');
           whereArgs.add(indigenousLanguage);
           return '(LOWER(subject) LIKE ? OR unit = ?)';
