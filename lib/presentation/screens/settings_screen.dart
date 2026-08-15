@@ -82,35 +82,54 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Activation Code required for 2nd+ learner
-                if (existingCount >= 1) ...[
-                  const Text(
-                    'Learner Activation Code *',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.deepMaroon),
+                // Activation Code required for all new learner profiles
+                const Text(
+                  'Learner Activation Code *',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.deepMaroon),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: codeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    hintText: 'Enter activation code (e.g. GRAME-XXXX-XXXX)',
+                    prefixIcon: const Icon(Icons.vpn_key, color: AppColors.royalGold),
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: codeController,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: InputDecoration(
-                      hintText: 'Enter activation code for $defaultName',
-                      prefixIcon: const Icon(Icons.vpn_key, color: AppColors.royalGold),
-                      isDense: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'An additional activation code is required for each extra learner profile.',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
-                  ),
-                ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'A valid activation code is required for each learner profile.',
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                ),
 
                 if (dialogError != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    dialogError!,
-                    style: const TextStyle(color: AppColors.incorrectRed, fontSize: 12),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightMaroon,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.incorrectRed, width: 1.5),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.incorrectRed, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            dialogError!,
+                            style: const TextStyle(
+                              color: AppColors.incorrectRed,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],
@@ -126,38 +145,30 @@ class SettingsScreen extends StatelessWidget {
                     : () async {
                         final code = codeController.text.trim().toUpperCase();
 
-                        DateTime? expiry;
-                        String? actCode;
-                        bool isAct = false;
+                        if (code.isEmpty) {
+                          setState(() => dialogError = 'Please enter a valid activation code for $defaultName.');
+                          return;
+                        }
 
-                        // For 2nd+ learner, validate activation code
-                        if (existingCount >= 1) {
-                          if (code.isEmpty) {
-                            setState(() => dialogError = 'Please enter an activation code for $defaultName.');
-                            return;
-                          }
+                        setState(() {
+                          isSaving = true;
+                          dialogError = null;
+                        });
 
+                        final devId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
+                        final result = await ApiService.validateLicense(code, devId, gradeId: selectedGrade);
+
+                        if (result['valid'] != true) {
                           setState(() {
-                            isSaving = true;
-                            dialogError = null;
+                            isSaving = false;
+                            dialogError = result['message'] ?? 'Invalid or already used activation code.';
                           });
+                          return; // STOP! Do not create profile or close dialog!
+                        }
 
-                          final devId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
-                          final result = await ApiService.validateLicense(code, devId, gradeId: selectedGrade);
-
-                          if (result['valid'] != true) {
-                            setState(() {
-                              isSaving = false;
-                              dialogError = result['message'] ?? 'Invalid or already used activation code.';
-                            });
-                            return;
-                          }
-
-                          if (result['expiryDate'] != null) {
-                            expiry = DateTime.tryParse(result['expiryDate']);
-                          }
-                          actCode = code;
-                          isAct = true;
+                        DateTime? expiry;
+                        if (result['expiryDate'] != null) {
+                          expiry = DateTime.tryParse(result['expiryDate']);
                         }
 
                         final newProfile = LearnerProfile(
@@ -167,9 +178,9 @@ class SettingsScreen extends StatelessWidget {
                           grade: selectedGrade,
                           indigenousLanguage: selectedLang,
                           createdAt: DateTime.now(),
-                          activationCode: actCode,
+                          activationCode: code,
                           expiryDate: expiry,
-                          isActivated: isAct,
+                          isActivated: true,
                           isGradeLocked: false,
                         );
 
