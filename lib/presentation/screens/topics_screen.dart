@@ -44,11 +44,13 @@ class _TopicsScreenState extends State<TopicsScreen> {
     final learnerId = provider.activeLearner?.id;
 
     final selectedLang = provider.currentIndigenousLang;
+    debugPrint('🔍 TopicsScreen._loadTopics: subject="$_selectedSubject", grade=$grade, learnerId=$learnerId, selectedLang="$selectedLang"');
     final topics = await provider.questionRepository.getTopicsForSubject(
       grade: grade,
       subject: _selectedSubject,
       indigenousLanguage: _selectedSubject.toLowerCase().contains('indigenous') ? selectedLang : null,
     );
+    debugPrint('🔍 TopicsScreen._loadTopics result: ${topics.length} topics found -> $topics');
 
     final progress = await provider.analyticsRepository.getTopicProgressMap(
       grade: grade,

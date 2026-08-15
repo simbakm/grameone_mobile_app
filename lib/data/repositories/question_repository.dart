@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/models.dart';
@@ -41,18 +42,32 @@ class QuestionRepository {
         if (lang.contains('ndebele') || lang.contains('isindebele')) {
           whereArgs.add('%ndebele%');
           whereArgs.add('%isindebele%');
-          whereArgs.add('Ndebele');
-          return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR unit = ?)';
+          whereArgs.add('%ndebele%');
+          whereArgs.add('%isindebele%');
+          whereArgs.add('%ndebele%');
+          whereArgs.add('%isindebele%');
+          whereArgs.add('%ndebele%');
+          whereArgs.add('%isindebele%');
+          return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(unit) LIKE ? OR LOWER(unit) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(concept) LIKE ? OR LOWER(concept) LIKE ?)';
         } else if (lang.contains('shona') || lang.contains('chishona')) {
           whereArgs.add('%shona%');
           whereArgs.add('%chishona%');
-          whereArgs.add('Shona');
-          return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR unit = ?)';
+          whereArgs.add('%shona%');
+          whereArgs.add('%chishona%');
+          whereArgs.add('%shona%');
+          whereArgs.add('%chishona%');
+          whereArgs.add('%shona%');
+          whereArgs.add('%chishona%');
+          whereArgs.add('%indigenous%');
+          whereArgs.add('%ndebele%');
+          whereArgs.add('%tonga%');
+          return '(LOWER(subject) LIKE ? OR LOWER(subject) LIKE ? OR LOWER(unit) LIKE ? OR LOWER(unit) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(concept) LIKE ? OR LOWER(concept) LIKE ? OR (LOWER(subject) LIKE ? AND LOWER(topic) NOT LIKE ? AND LOWER(topic) NOT LIKE ?))';
         } else {
-          // Dynamic handler for ALL other indigenous languages: Tonga, Kalanga, Tshivenda, Nambya, Xichangana, Sesotho, etc.
           whereArgs.add('%$lang%');
-          whereArgs.add(indigenousLanguage);
-          return '(LOWER(subject) LIKE ? OR unit = ?)';
+          whereArgs.add('%$lang%');
+          whereArgs.add('%$lang%');
+          whereArgs.add('%$lang%');
+          return '(LOWER(subject) LIKE ? OR LOWER(unit) LIKE ? OR LOWER(topic) LIKE ? OR LOWER(concept) LIKE ?)';
         }
       } else {
         whereArgs.add('%indigenous%');
@@ -68,6 +83,7 @@ class QuestionRepository {
 
   Future<void> insertQuestions(List<Question> questions) async {
     final db = await dbProvider.database;
+    debugPrint('💾 QuestionRepository.insertQuestions: Inserting ${questions.length} questions...');
     await db.transaction((txn) async {
       for (var q in questions) {
         await txn.insert(
@@ -84,6 +100,7 @@ class QuestionRepository {
         }
       }
     });
+    debugPrint('✅ QuestionRepository.insertQuestions: Done.');
   }
 
   Future<List<Question>> getQuestions({
@@ -111,12 +128,14 @@ class QuestionRepository {
       whereArgs.add(unit);
     }
 
+    debugPrint('🔍 getQuestions SQL: $whereClause | Args: $whereArgs');
     final List<Map<String, dynamic>> questionMaps = await db.query(
       'questions',
       where: whereClause,
       whereArgs: whereArgs,
       limit: limit,
     );
+    debugPrint('🔍 getQuestions returned ${questionMaps.length} rows');
 
     List<Question> questions = [];
     for (var qMap in questionMaps) {
@@ -141,11 +160,13 @@ class QuestionRepository {
     List<dynamic> whereArgs = [grade];
     final subCond = _buildSubjectCondition(subject, whereArgs, indigenousLanguage: indigenousLanguage);
 
-    final List<Map<String, dynamic>> result = await db.rawQuery(
-      'SELECT DISTINCT topic FROM questions WHERE grade = ? AND $subCond AND topic IS NOT NULL AND topic != "" ORDER BY topic ASC',
-      whereArgs,
-    );
-    return result.map((r) => r['topic'] as String).toList();
+    final String sql = 'SELECT DISTINCT topic FROM questions WHERE grade = ? AND $subCond AND topic IS NOT NULL AND topic != "" ORDER BY topic ASC';
+    debugPrint('🔍 getTopicsForSubject SQL: $sql | Args: $whereArgs');
+
+    final List<Map<String, dynamic>> result = await db.rawQuery(sql, whereArgs);
+    final topics = result.map((r) => r['topic'] as String).toList();
+    debugPrint('🔍 getTopicsForSubject returned ${topics.length} topics: $topics');
+    return topics;
   }
 
   Future<List<String>> getUnitsForTopic({
