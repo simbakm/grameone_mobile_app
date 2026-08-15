@@ -180,7 +180,7 @@ class AppProvider extends ChangeNotifier {
     _overallScore = await _analyticsRepository.getOverallAverageScore(learnerProfileId: learnerId);
     _testsDone = await _analyticsRepository.getTotalTestsCount(learnerProfileId: learnerId);
     _studyStreak = await _analyticsRepository.getStudyStreakDays(learnerProfileId: learnerId);
-    _badges = await _badgeEngine.evaluateAndGetBadges();
+    _badges = await _badgeEngine.evaluateAndGetBadges(learnerId: learnerId);
     _subjectPerformance = await _analyticsRepository.getSubjectPerformance(grade, learnerProfileId: learnerId);
     _weakConceptsDetailed = await _analyticsRepository.getWeakConceptsDetailed(grade: grade, learnerProfileId: learnerId);
     _strongConceptsDetailed = await _analyticsRepository.getStrongConceptsDetailed(grade: grade, learnerProfileId: learnerId);

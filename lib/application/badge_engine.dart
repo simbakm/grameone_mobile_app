@@ -55,11 +55,15 @@ class BadgeEngine {
     },
   ];
 
-  Future<List<BadgeModel>> evaluateAndGetBadges() async {
+  /// Evaluate and return badges for a specific learner profile.
+  /// Pass [learnerId] to scope badges per-learner. Falls back to 'global' if null.
+  Future<List<BadgeModel>> evaluateAndGetBadges({String? learnerId}) async {
     final db = await dbProvider.database;
-    final int totalTests = await analyticsRepository.getTotalTestsCount();
-    final int totalCorrect = await analyticsRepository.getTotalCorrectAnswersCount();
-    final int streakDays = await analyticsRepository.getStudyStreakDays();
+    final effectiveLearnerId = learnerId ?? 'global';
+
+    final int totalTests = await analyticsRepository.getTotalTestsCount(learnerProfileId: learnerId);
+    final int totalCorrect = await analyticsRepository.getTotalCorrectAnswersCount(learnerProfileId: learnerId);
+    final int streakDays = await analyticsRepository.getStudyStreakDays(learnerProfileId: learnerId);
 
     DateTime now = DateTime.now();
 
@@ -74,17 +78,20 @@ class BadgeEngine {
       if (key == '7_DAY_STREAK' && streakDays >= 7) shouldUnlock = true;
       if (key == '30_DAY_STREAK' && streakDays >= 30) shouldUnlock = true;
 
-      // Insert or Update badge record
+      final String badgeId = 'badge_${key}_$effectiveLearnerId';
+
+      // Insert or update badge record scoped to this learner
       final List<Map<String, dynamic>> existing = await db.query(
         'badges',
-        where: 'badge_key = ?',
-        whereArgs: [key],
+        where: 'badge_key = ? AND learner_profile_id = ?',
+        whereArgs: [key, effectiveLearnerId],
       );
 
       if (existing.isEmpty) {
         await db.insert('badges', {
-          'id': 'badge_$key',
+          'id': badgeId,
           'badge_key': key,
+          'learner_profile_id': effectiveLearnerId,
           'title': b['title'],
           'description': b['description'],
           'icon_name': b['icon'],
@@ -94,13 +101,18 @@ class BadgeEngine {
         await db.update(
           'badges',
           {'unlocked_at': now.toIso8601String()},
-          where: 'badge_key = ?',
-          whereArgs: [key],
+          where: 'badge_key = ? AND learner_profile_id = ?',
+          whereArgs: [key, effectiveLearnerId],
         );
       }
     }
 
-    final List<Map<String, dynamic>> badgeMaps = await db.query('badges');
+    // Return only this learner's badges
+    final List<Map<String, dynamic>> badgeMaps = await db.query(
+      'badges',
+      where: 'learner_profile_id = ?',
+      whereArgs: [effectiveLearnerId],
+    );
     return badgeMaps.map((m) => BadgeModel.fromMap(m)).toList();
   }
 }

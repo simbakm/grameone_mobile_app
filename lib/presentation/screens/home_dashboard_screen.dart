@@ -231,12 +231,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -297,8 +297,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Multi-Account Switch Prompt if other profiles exist on device
-              if (provider.learnerProfiles.length > 1) ...[
+              // Multi-Account Switch Prompt — only show non-expired other profiles
+              if (provider.learnerProfiles.where((p) => p.id != provider.activeLearner?.id && !p.isExpired).isNotEmpty) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -328,7 +328,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
                       ...provider.learnerProfiles
-                          .where((p) => p.id != provider.activeLearner?.id)
+                          .where((p) => p.id != provider.activeLearner?.id && !p.isExpired)
                           .map((otherProfile) => Padding(
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: SizedBox(

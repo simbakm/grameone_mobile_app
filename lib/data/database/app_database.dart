@@ -31,7 +31,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 4,          // ← bumped to version 4 for per-learner licensing
+      version: 5,          // ← bumped to version 5 for per-learner badges
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -118,15 +118,17 @@ class AppDatabase {
       )
     ''');
 
-    // Badges Table
+    // Badges Table (per learner)
     await db.execute('''
       CREATE TABLE badges (
         id TEXT PRIMARY KEY,
-        badge_key TEXT UNIQUE NOT NULL,
+        badge_key TEXT NOT NULL,
+        learner_profile_id TEXT NOT NULL DEFAULT 'global',
         title TEXT NOT NULL,
         description TEXT NOT NULL,
         icon_name TEXT NOT NULL,
-        unlocked_at TEXT
+        unlocked_at TEXT,
+        UNIQUE(badge_key, learner_profile_id)
       )
     ''');
 
@@ -201,6 +203,30 @@ class AppDatabase {
         await db.execute('ALTER TABLE learner_profiles ADD COLUMN is_grade_locked INTEGER NOT NULL DEFAULT 0');
       } catch (e) {
         debugPrint('Per-learner license columns may already exist: $e');
+      }
+    }
+    if (oldVersion < 5) {
+      try {
+        await db.execute('ALTER TABLE badges RENAME TO badges_old');
+        await db.execute('''
+          CREATE TABLE badges (
+            id TEXT PRIMARY KEY,
+            badge_key TEXT NOT NULL,
+            learner_profile_id TEXT NOT NULL DEFAULT 'global',
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            icon_name TEXT NOT NULL,
+            unlocked_at TEXT,
+            UNIQUE(badge_key, learner_profile_id)
+          )
+        ''');
+        await db.execute('''
+          INSERT OR IGNORE INTO badges (id, badge_key, learner_profile_id, title, description, icon_name, unlocked_at)
+          SELECT id, badge_key, 'global', title, description, icon_name, unlocked_at FROM badges_old
+        ''');
+        await db.execute('DROP TABLE IF EXISTS badges_old');
+      } catch (e) {
+        debugPrint('Badge v5 migration: e');
       }
     }
   }
