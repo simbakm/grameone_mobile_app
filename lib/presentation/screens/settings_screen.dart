@@ -126,6 +126,10 @@ class SettingsScreen extends StatelessWidget {
                     : () async {
                         final code = codeController.text.trim().toUpperCase();
 
+                        DateTime? expiry;
+                        String? actCode;
+                        bool isAct = false;
+
                         // For 2nd+ learner, validate activation code
                         if (existingCount >= 1) {
                           if (code.isEmpty) {
@@ -139,15 +143,21 @@ class SettingsScreen extends StatelessWidget {
                           });
 
                           final devId = provider.licenseInfo?.deviceId ?? 'UNKNOWN';
-                          final result = await ApiService.validateLicense(code, devId);
+                          final result = await ApiService.validateLicense(code, devId, gradeId: selectedGrade);
 
                           if (result['valid'] != true) {
                             setState(() {
                               isSaving = false;
-                              dialogError = result['message'] ?? 'Invalid activation code for $defaultName.';
+                              dialogError = result['message'] ?? 'Invalid or already used activation code.';
                             });
                             return;
                           }
+
+                          if (result['expiryDate'] != null) {
+                            expiry = DateTime.tryParse(result['expiryDate']);
+                          }
+                          actCode = code;
+                          isAct = true;
                         }
 
                         final newProfile = LearnerProfile(
@@ -157,6 +167,10 @@ class SettingsScreen extends StatelessWidget {
                           grade: selectedGrade,
                           indigenousLanguage: selectedLang,
                           createdAt: DateTime.now(),
+                          activationCode: actCode,
+                          expiryDate: expiry,
+                          isActivated: isAct,
+                          isGradeLocked: false,
                         );
 
                         await provider.createOrUpdateLearnerProfile(newProfile);
@@ -179,32 +193,35 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildLicenseExpirySection(BuildContext context, AppProvider provider) {
-    final license = provider.licenseInfo;
-    final isActivated = license?.isActivated ?? false;
-    final deviceId = license?.deviceId ?? 'DEV-GRAME-2026';
+    final activeLearner = provider.activeLearner;
+    final globalLicense = provider.licenseInfo;
+
+    final deviceId = globalLicense?.deviceId ?? 'DEV-GRAME-2026';
+    final bool isActivated = (activeLearner?.isActivated ?? false) || (globalLicense?.isActivated ?? false);
+    final DateTime? expiryDate = activeLearner?.expiryDate ?? globalLicense?.expiryDate;
 
     String expiryText = 'No active license found';
     String daysText = '';
     Color statusColor = AppColors.royalGold;
 
-    if (isActivated && license?.expiryDate != null) {
+    if (isActivated && expiryDate != null) {
       final now = DateTime.now();
-      final remaining = license!.expiryDate!.difference(now);
+      final remaining = expiryDate.difference(now);
       final days = remaining.inDays;
       final hours = remaining.inHours;
 
       if (remaining.isNegative) {
         statusColor = AppColors.incorrectRed;
-        expiryText = 'License Expired';
-        daysText = 'Expired on ${license.expiryDate!.day}/${license.expiryDate!.month}/${license.expiryDate!.year}';
+        expiryText = 'License Expired (${activeLearner?.name ?? 'Learner'})';
+        daysText = 'Expired on ${expiryDate.day}/${expiryDate.month}/${expiryDate.year}';
       } else if (days <= 1) {
         statusColor = AppColors.incorrectRed;
-        expiryText = 'License Expiring Soon';
+        expiryText = 'License Expiring Soon (${activeLearner?.name ?? 'Learner'})';
         daysText = '$hours hours remaining';
       } else {
         statusColor = AppColors.emeraldGreen;
-        expiryText = 'License Active';
-        daysText = '$days days remaining (expires ${license.expiryDate!.day}/${license.expiryDate!.month}/${license.expiryDate!.year})';
+        expiryText = 'License Active (${activeLearner?.name ?? 'Learner'})';
+        daysText = '$days days remaining (expires ${expiryDate.day}/${expiryDate.month}/${expiryDate.year})';
       }
     }
 
@@ -327,29 +344,70 @@ class SettingsScreen extends StatelessWidget {
                     const Divider(height: 16),
                     ...provider.learnerProfiles.map((profile) {
                       final isSelected = activeLearner?.id == profile.id;
+                      final isExpired = profile.isExpired;
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.lightGreen : AppColors.surfaceLight,
+                          color: isExpired
+                              ? AppColors.lightMaroon
+                              : (isSelected ? AppColors.lightGreen : AppColors.surfaceLight),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? AppColors.emeraldGreen : AppColors.borderLight,
-                            width: isSelected ? 2 : 1,
+                            color: isExpired
+                                ? AppColors.incorrectRed
+                                : (isSelected ? AppColors.emeraldGreen : AppColors.borderLight),
+                            width: isSelected || isExpired ? 2 : 1,
                           ),
                         ),
                         child: ListTile(
                           leading: Text(profile.avatar, style: const TextStyle(fontSize: 24)),
-                          title: Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Grade ${profile.grade} • ${profile.indigenousLanguage}'),
-                          trailing: isSelected
-                              ? const Chip(
+                          title: Row(
+                            children: [
+                              Text(profile.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              if (isExpired) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.incorrectRed,
+                                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                                  ),
+                                  child: const Text(
+                                    'EXPIRED',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: Text(
+                            isExpired
+                                ? 'Grade ${profile.grade} • License Expired'
+                                : 'Grade ${profile.grade} • ${profile.indigenousLanguage}',
+                            style: TextStyle(
+                              color: isExpired ? AppColors.incorrectRed : AppColors.textSecondaryLight,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isSelected)
+                                const Chip(
                                   label: Text('Active', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                                   backgroundColor: AppColors.emeraldGreen,
                                 )
-                              : OutlinedButton(
+                              else
+                                OutlinedButton(
                                   onPressed: () => provider.switchLearnerProfile(profile),
                                   child: const Text('Switch'),
                                 ),
+                            ],
+                          ),
                         ),
                       );
                     }),
