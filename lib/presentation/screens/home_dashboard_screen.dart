@@ -289,6 +289,63 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Multi-Account Switch Prompt if other profiles exist on device
+              if (provider.learnerProfiles.length > 1) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGreen,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.emeraldGreen, width: 1.5),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.swap_horiz, color: AppColors.emeraldGreen),
+                          SizedBox(width: 6),
+                          Text(
+                            'Switch Account',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.emeraldGreen),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'License for ${provider.activeLearner?.name ?? 'this user'} has expired. You can switch to another child profile with a valid license instead of locking the app.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondaryLight, height: 1.3),
+                      ),
+                      const SizedBox(height: 14),
+                      ...provider.learnerProfiles
+                          .where((p) => p.id != provider.activeLearner?.id)
+                          .map((otherProfile) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      provider.switchLearnerProfile(otherProfile);
+                                    },
+                                    icon: Text(otherProfile.avatar, style: const TextStyle(fontSize: 18)),
+                                    label: Text('Switch to ${otherProfile.name} (Grade ${otherProfile.grade})'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.emeraldGreen,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                              )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

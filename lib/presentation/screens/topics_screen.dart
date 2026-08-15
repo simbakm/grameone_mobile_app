@@ -43,9 +43,11 @@ class _TopicsScreenState extends State<TopicsScreen> {
     final grade = provider.currentGrade;
     final learnerId = provider.activeLearner?.id;
 
+    final selectedLang = provider.currentIndigenousLang;
     final topics = await provider.questionRepository.getTopicsForSubject(
       grade: grade,
       subject: _selectedSubject,
+      indigenousLanguage: _selectedSubject.toLowerCase().contains('indigenous') ? selectedLang : null,
     );
 
     final progress = await provider.analyticsRepository.getTopicProgressMap(
@@ -146,7 +148,11 @@ class _TopicsScreenState extends State<TopicsScreen> {
                         child: CircularProgressIndicator(color: AppColors.emeraldGreen),
                       )
                     : _dynamicTopics.isEmpty
-                        ? NoContentWidget(subjectName: _selectedSubject)
+                        ? NoContentWidget(
+                            subjectName: _selectedSubject.toLowerCase().contains('indigenous')
+                                ? '$_selectedSubject ($selectedLang)'
+                                : _selectedSubject,
+                          )
                         : ListView.builder(
                             itemCount: _dynamicTopics.length,
                             itemBuilder: (context, index) {
